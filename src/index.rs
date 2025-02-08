@@ -53,11 +53,12 @@ pub(crate) mod testing;
 
 const SCHEMA_VERSION: u64 = 31;
 
-define_multimap_table! { OUTPOINT_TO_FROZEN_RUNE_ID, &OutPointValue, RuneIdValue }
+define_multimap_table! { OUTPOINT_TO_FROZEN_RUNE_BALANCE, &OutPointValue, &[u8] }
 define_multimap_table! { RUNE_TO_FREEZABLE_RUNE_ID, u128, RuneIdValue }
 define_multimap_table! { SAT_TO_SEQUENCE_NUMBER, u64, u32 }
 define_multimap_table! { SEQUENCE_NUMBER_TO_CHILDREN, u32, u32 }
 define_multimap_table! { SCRIPT_PUBKEY_TO_OUTPOINT, &[u8], OutPointValue }
+define_multimap_table! { SCRIPT_PUBKEY_TO_SPENT_FROZEN_OUTPOINT, &[u8], OutPointValue }
 define_table! { HEIGHT_TO_BLOCK_HEADER, u32, &HeaderValue }
 define_table! { HEIGHT_TO_LAST_SEQUENCE_NUMBER, u32, u32 }
 define_table! { HOME_INSCRIPTIONS, u32, InscriptionIdValue }
@@ -66,6 +67,7 @@ define_table! { INSCRIPTION_NUMBER_TO_SEQUENCE_NUMBER, i32, u32 }
 define_table! { OUTPOINT_ID_TO_OUTPOINT, OutPointIdValue, OutPointValue }
 define_table! { OUTPOINT_TO_OUTPOINT_ID, &OutPointValue, OutPointIdValue }
 define_table! { OUTPOINT_TO_RUNE_BALANCES, &OutPointValue, &[u8] }
+define_table! { OUTPOINT_TO_SCRIPT_PUBKEY, &OutPointValue, &[u8] }
 define_table! { OUTPOINT_TO_UTXO_ENTRY, &OutPointValue, &UtxoEntry }
 define_table! { RUNE_ID_TO_RUNE_ENTRY, RuneIdValue, RuneEntryValue }
 define_table! { RUNE_TO_RUNE_ID, u128, RuneIdValue }
@@ -311,10 +313,11 @@ impl Index {
         tx.set_durability(durability);
         tx.set_quick_repair(true);
 
-        tx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
+        tx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_BALANCE)?;
         tx.open_multimap_table(RUNE_TO_FREEZABLE_RUNE_ID)?;
         tx.open_multimap_table(SAT_TO_SEQUENCE_NUMBER)?;
         tx.open_multimap_table(SCRIPT_PUBKEY_TO_OUTPOINT)?;
+        tx.open_multimap_table(SCRIPT_PUBKEY_TO_SPENT_FROZEN_OUTPOINT)?;
         tx.open_multimap_table(SEQUENCE_NUMBER_TO_CHILDREN)?;
         tx.open_table(HEIGHT_TO_BLOCK_HEADER)?;
         tx.open_table(HEIGHT_TO_LAST_SEQUENCE_NUMBER)?;
@@ -324,6 +327,7 @@ impl Index {
         tx.open_table(OUTPOINT_ID_TO_OUTPOINT)?;
         tx.open_table(OUTPOINT_TO_OUTPOINT_ID)?;
         tx.open_table(OUTPOINT_TO_RUNE_BALANCES)?;
+        tx.open_table(OUTPOINT_TO_SCRIPT_PUBKEY)?;
         tx.open_table(OUTPOINT_TO_UTXO_ENTRY)?;
         tx.open_table(RUNE_ID_TO_RUNE_ENTRY)?;
         tx.open_table(RUNE_TO_RUNE_ID)?;
@@ -1047,15 +1051,17 @@ impl Index {
 
     let outpoint_to_balances = rtx.open_table(OUTPOINT_TO_RUNE_BALANCES)?;
 
-    let outpoint_to_frozen_rune_id = rtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
+    let outpoint_to_frozen_rune_balance =
+      rtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_BALANCE)?;
 
     let id_to_rune_entries = rtx.open_table(RUNE_ID_TO_RUNE_ENTRY)?;
 
-    let frozen_runes = outpoint_to_frozen_rune_id
+    let frozen_runes = outpoint_to_frozen_rune_balance
       .get(&outpoint.store())?
-      .filter_map(|rune_id| {
-        let guard = rune_id.ok()?;
-        Some(RuneId::load(guard.value()))
+      .filter_map(|guard| {
+        let buffer = guard.ok()?;
+        let ((id, _), _) = Index::decode_rune_balance(buffer.value()).unwrap();
+        Some(id)
       })
       .collect::<HashSet<RuneId>>();
 
@@ -1233,16 +1239,17 @@ impl Index {
     let rtx = self.database.begin_read()?;
 
     for entry in rtx
-      .open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?
+      .open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_BALANCE)?
       .iter()?
     {
-      let (outpoint, ids) = entry?;
+      let (outpoint, balance_buffers) = entry?;
       let outpoint = OutPoint::load(*outpoint.value());
 
-      let frozen_runes = ids
-        .filter_map(|id| {
-          let guard = id.ok()?;
-          Some(RuneId::load(guard.value()))
+      let frozen_runes = balance_buffers
+        .filter_map(|guard| {
+          let buffer = guard.ok()?;
+          let ((id, _), _) = Index::decode_rune_balance(buffer.value()).unwrap();
+          Some(id)
         })
         .collect::<HashSet<RuneId>>();
 
@@ -7120,94 +7127,6 @@ mod tests {
         },
         txid: txid6,
         rune_id: id,
-      }
-    );
-
-    let txid6 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(21, 1, 0, Witness::new())],
-      outputs: 1,
-      op_return: Some(
-        Runestone {
-          freeze: Some(FreezeEdict {
-            rune_id: Some(id),
-            outpoints: vec![OutPointId::new(11, 1, 1).unwrap()],
-          }),
-          ..default()
-        }
-        .encipher(),
-      ),
-      ..default()
-    });
-
-    let txid7 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(11, 1, 1, Witness::new())],
-      outputs: 1,
-      ..default()
-    });
-
-    context.mine_blocks(1);
-
-    context.assert_runes_and_frozen_runes(
-      [
-        (
-          id,
-          RuneEntry {
-            block: 8,
-            etching: txid0,
-            spaced_rune: SpacedRune {
-              rune: Rune(RUNE),
-              ..default()
-            },
-            terms: Some(Terms {
-              amount: Some(1000),
-              cap: Some(100),
-              ..Default::default()
-            }),
-            timestamp: 8,
-            mints: 1,
-            burned: 1000,
-            freezer: Some(Rune(FREEZER)),
-            ..Default::default()
-          },
-        ),
-        (
-          freezer_id,
-          RuneEntry {
-            block: freezer_id.block,
-            etching: txid4,
-            number: 1,
-            spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
-              spacers: 0,
-            },
-            premine: u128::MAX,
-            symbol: Some('$'),
-            timestamp: freezer_id.block,
-            ..default()
-          },
-        ),
-      ],
-      [(
-        OutPoint {
-          txid: txid6,
-          vout: 0,
-        },
-        vec![(freezer_id, u128::MAX)],
-      )],
-      [],
-    );
-
-    event_receiver.blocking_recv().unwrap();
-    event_receiver.blocking_recv().unwrap();
-    event_receiver.blocking_recv().unwrap();
-
-    pretty_assert_eq!(
-      event_receiver.blocking_recv().unwrap(),
-      Event::RuneBurned {
-        block_height: 22,
-        txid: txid7,
-        rune_id: id,
-        amount: 889,
       }
     );
   }

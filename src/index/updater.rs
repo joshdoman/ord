@@ -354,9 +354,13 @@ impl Updater<'_> {
       let mut outpoint_id_to_outpoint = wtx.open_table(OUTPOINT_ID_TO_OUTPOINT)?;
       let mut outpoint_to_outpoint_id = wtx.open_table(OUTPOINT_TO_OUTPOINT_ID)?;
       let mut outpoint_to_rune_balances = wtx.open_table(OUTPOINT_TO_RUNE_BALANCES)?;
-      let mut outpoint_to_frozen_rune_id = wtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
+      let mut outpoint_to_script_pubkey = wtx.open_table(OUTPOINT_TO_SCRIPT_PUBKEY)?;
+      let mut outpoint_to_frozen_rune_balance =
+        wtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_BALANCE)?;
       let mut rune_id_to_rune_entry = wtx.open_table(RUNE_ID_TO_RUNE_ENTRY)?;
       let mut rune_to_rune_id = wtx.open_table(RUNE_TO_RUNE_ID)?;
+      let mut script_pubkey_to_spent_frozen_outpoint =
+        wtx.open_multimap_table(SCRIPT_PUBKEY_TO_SPENT_FROZEN_OUTPOINT)?;
       let mut sequence_number_to_rune_id = wtx.open_table(SEQUENCE_NUMBER_TO_RUNE_ID)?;
       let mut transaction_id_to_rune = wtx.open_table(TRANSACTION_ID_TO_RUNE)?;
 
@@ -381,9 +385,11 @@ impl Updater<'_> {
         outpoint_id_to_outpoint: &mut outpoint_id_to_outpoint,
         outpoint_to_outpoint_id: &mut outpoint_to_outpoint_id,
         outpoint_to_balances: &mut outpoint_to_rune_balances,
-        outpoint_to_frozen_rune_id: &mut outpoint_to_frozen_rune_id,
+        outpoint_to_script_pubkey: &mut outpoint_to_script_pubkey,
+        outpoint_to_frozen_rune_balance: &mut outpoint_to_frozen_rune_balance,
         rune_to_id: &mut rune_to_rune_id,
         runes,
+        script_pubkey_to_spent_frozen_outpoint: &mut script_pubkey_to_spent_frozen_outpoint,
         sequence_number_to_rune_id: &mut sequence_number_to_rune_id,
         statistic_to_count: &mut statistic_to_count,
         transaction_id_to_rune: &mut transaction_id_to_rune,

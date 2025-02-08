@@ -13,10 +13,13 @@ pub(super) struct RuneUpdater<'a, 'tx, 'client> {
   pub(super) outpoint_id_to_outpoint: &'a mut Table<'tx, OutPointIdValue, OutPointValue>,
   pub(super) outpoint_to_outpoint_id: &'a mut Table<'tx, &'static OutPointValue, OutPointIdValue>,
   pub(super) outpoint_to_balances: &'a mut Table<'tx, &'static OutPointValue, &'static [u8]>,
-  pub(super) outpoint_to_frozen_rune_id:
-    &'a mut MultimapTable<'tx, &'static OutPointValue, RuneIdValue>,
+  pub(super) outpoint_to_script_pubkey: &'a mut Table<'tx, &'static OutPointValue, &'static [u8]>,
+  pub(super) outpoint_to_frozen_rune_balance:
+    &'a mut MultimapTable<'tx, &'static OutPointValue, &'static [u8]>,
   pub(super) rune_to_id: &'a mut Table<'tx, u128, RuneIdValue>,
   pub(super) runes: u64,
+  pub(super) script_pubkey_to_spent_frozen_outpoint:
+    &'a mut MultimapTable<'tx, &'static [u8], OutPointValue>,
   pub(super) sequence_number_to_rune_id: &'a mut Table<'tx, u32, RuneIdValue>,
   pub(super) statistic_to_count: &'a mut Table<'tx, u64, u64>,
   pub(super) transaction_id_to_rune: &'a mut Table<'tx, &'static TxidValue, u128>,
@@ -26,7 +29,7 @@ impl RuneUpdater<'_, '_, '_> {
   pub(super) fn index_runes(&mut self, tx_index: u32, tx: &Transaction, txid: Txid) -> Result<()> {
     let artifact = Runestone::decipher(tx);
 
-    let mut unallocated = self.unallocated(tx, txid)?;
+    let mut unallocated = self.unallocated(tx)?;
 
     let mut allocated: Vec<HashMap<RuneId, Lot>> = vec![HashMap::new(); tx.output.len()];
 
@@ -55,7 +58,16 @@ impl RuneUpdater<'_, '_, '_> {
         }
 
         self.freeze(txid, runestone, &unallocated)?;
-        self.unfreeze(txid, runestone, &unallocated)?;
+
+        for (vout, allocated_unfrozen_balances) in self
+          .unfreeze(tx, txid, runestone, &unallocated)?
+          .iter()
+          .enumerate()
+        {
+          for (id, balance) in allocated_unfrozen_balances {
+            *allocated[vout].entry(*id).or_default() += *balance;
+          }
+        }
 
         for Edict { id, amount, output } in runestone.edicts.iter().copied() {
           let amount = Lot(amount);
@@ -231,6 +243,9 @@ impl RuneUpdater<'_, '_, '_> {
       self
         .outpoint_to_balances
         .insert(&outpoint.store(), buffer.as_slice())?;
+      self
+        .outpoint_to_script_pubkey
+        .insert(&outpoint.store(), tx.output[vout].script_pubkey.as_bytes())?;
     }
 
     // increment entries with burned runes
@@ -270,18 +285,25 @@ impl RuneUpdater<'_, '_, '_> {
       return Ok(());
     };
 
-    for (outpoint, id) in self.get_freezable_outpoint_balances(&edict, unallocated)? {
-      self
-        .outpoint_to_frozen_rune_id
-        .insert(&outpoint.store(), &id.store())?;
+    let mut buffer: Vec<u8> = Vec::new();
+    for (id, balances) in &self.get_freezable_balances_by_rune_id(&edict, unallocated)? {
+      for (outpoint, balance) in balances {
+        buffer.clear();
 
-      if let Some(sender) = self.event_sender {
-        sender.blocking_send(Event::RuneFreezed {
-          block_height: self.height,
-          outpoint,
-          txid,
-          rune_id: id,
-        })?;
+        Index::encode_rune_balance(*id, balance.0, &mut buffer);
+
+        self
+          .outpoint_to_frozen_rune_balance
+          .insert(&outpoint.store(), buffer.as_slice())?;
+
+        if let Some(sender) = self.event_sender {
+          sender.blocking_send(Event::RuneFreezed {
+            block_height: self.height,
+            outpoint: *outpoint,
+            txid,
+            rune_id: *id,
+          })?;
+        }
       }
     }
 
@@ -290,38 +312,108 @@ impl RuneUpdater<'_, '_, '_> {
 
   fn unfreeze(
     &mut self,
+    tx: &Transaction,
     txid: Txid,
     runestone: &Runestone,
     unallocated: &HashMap<RuneId, Lot>,
-  ) -> Result {
+  ) -> Result<Vec<HashMap<RuneId, Lot>>> {
+    let mut allocated: Vec<HashMap<RuneId, Lot>> = vec![HashMap::new(); tx.output.len()];
+
     let Some(edict) = runestone.unfreeze.clone() else {
-      return Ok(());
+      return Ok(allocated);
     };
 
-    for (outpoint, id) in self.get_freezable_outpoint_balances(&edict, unallocated)? {
-      self
-        .outpoint_to_frozen_rune_id
-        .remove(&outpoint.store(), &id.store())?;
+    let freezable_balances_by_id = self.get_freezable_balances_by_rune_id(&edict, unallocated)?;
 
-      if let Some(sender) = self.event_sender {
-        sender.blocking_send(Event::RuneUnfreezed {
-          block_height: self.height,
-          outpoint,
-          txid,
-          rune_id: id,
-        })?;
+    let mut buffer: Vec<u8> = Vec::new();
+    for (id, balances) in &freezable_balances_by_id {
+      for (outpoint, balance) in balances {
+        buffer.clear();
+
+        Index::encode_rune_balance(*id, balance.0, &mut buffer);
+
+        self
+          .outpoint_to_frozen_rune_balance
+          .remove(&outpoint.store(), buffer.as_slice())?;
+
+        if let Some(sender) = self.event_sender {
+          sender.blocking_send(Event::RuneUnfreezed {
+            block_height: self.height,
+            outpoint: *outpoint,
+            txid,
+            rune_id: *id,
+          })?;
+        }
       }
     }
 
-    Ok(())
+    // Loop through output scripts and check if any have runes that can be unfrozen
+    for (output, tx_out) in tx.output.iter().enumerate() {
+      // Get all spent frozen outpoints that have the script pubkey
+      let spent_frozen_outpoints = self
+        .script_pubkey_to_spent_frozen_outpoint
+        .get(tx_out.script_pubkey.as_bytes())?
+        .filter_map(|outpoint| {
+          let guard = outpoint.ok()?;
+          Some(OutPoint::load(guard.value()))
+        })
+        .collect::<Vec<OutPoint>>();
+
+      for outpoint in spent_frozen_outpoints {
+        // Get all spent frozen balances that can potentially be unfrozen
+        let spent_frozen_balances = self
+          .outpoint_to_frozen_rune_balance
+          .get(&outpoint.store())?
+          .filter_map(|guard| {
+            let buffer = guard.ok()?;
+            let ((id, balance), _) = Index::decode_rune_balance(buffer.value()).unwrap();
+            Some((buffer.value().to_vec(), id, balance))
+          })
+          .collect::<Vec<(Vec<u8>, RuneId, u128)>>();
+
+        let mut unfrozen = 0;
+        for (buffer, id, balance) in &spent_frozen_balances {
+          // Unfreeze balance and allocate to output with identical script pubkey
+          if freezable_balances_by_id.contains_key(id) {
+            *allocated[output].entry(*id).or_default() += *balance;
+
+            self
+              .outpoint_to_frozen_rune_balance
+              .remove(&outpoint.store(), buffer.as_slice())?;
+
+            // If every spent frozen balance has been unfrozen, we can safely delete the mappings
+            // between the outpoint and the script pubkey, as they're no longer needed.
+            unfrozen += 1;
+            if unfrozen == spent_frozen_balances.len() {
+              self
+                .script_pubkey_to_spent_frozen_outpoint
+                .remove(tx_out.script_pubkey.as_bytes(), &outpoint.store())?;
+
+              self.outpoint_to_script_pubkey.remove(&outpoint.store())?;
+            }
+
+            if let Some(sender) = self.event_sender {
+              sender.blocking_send(Event::RuneUnfreezed {
+                block_height: self.height,
+                outpoint,
+                txid,
+                rune_id: *id,
+              })?;
+            }
+          }
+        }
+      }
+    }
+
+    Ok(allocated)
   }
 
-  fn get_freezable_outpoint_balances(
+  fn get_freezable_balances_by_rune_id(
     &mut self,
     edict: &FreezeEdict,
     unallocated: &HashMap<RuneId, Lot>,
-  ) -> Result<Vec<(OutPoint, RuneId)>> {
-    let mut freezable_balances = Vec::new();
+  ) -> Result<HashMap<RuneId, Vec<(OutPoint, Lot)>>> {
+    let mut freezables_balances_by_id = HashMap::<RuneId, Vec<(OutPoint, Lot)>>::new();
 
     // List of outpoints to freeze
     let mut outpoints: Vec<OutPoint> = Vec::new();
@@ -332,31 +424,30 @@ impl RuneUpdater<'_, '_, '_> {
       outpoints.push(OutPoint::load(outpoint_entry.value()));
     }
 
-    // List runes that the the unallocated runes can freeze
-    let mut runes_to_freeze: Vec<RuneId> = Vec::new();
+    // Add an empty entry for all runes that the unallocated runes can freeze
     if let Some(rune_id) = edict.rune_id {
       // Verify that we possess the rune that can freeze this rune id
       let Some(entry) = self.id_to_entry.get(&rune_id.store())? else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let rune_entry = RuneEntry::load(entry.value());
 
       let Some(freezer) = rune_entry.freezer else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let Some(freezer_rune_id_entry) = self.rune_to_id.get(&freezer.store())? else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let freezer_rune_id = RuneId::load(freezer_rune_id_entry.value());
 
       // Get the unallocated balance for the freezer rune
       let Some(balance) = unallocated.get(&freezer_rune_id) else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
 
       // Verify that the freezer rune balance is non-zero
       if *balance > 0 {
-        runes_to_freeze.push(rune_id);
+        freezables_balances_by_id.insert(rune_id, Vec::new());
       }
     } else {
       // Add all runes that our input runes can freeze
@@ -377,16 +468,14 @@ impl RuneUpdater<'_, '_, '_> {
               Some(RuneId::load(guard.value()))
             })
             .collect::<Vec<RuneId>>();
-          runes_to_freeze.extend(freezable_ids);
+
+          freezables_balances_by_id.extend(freezable_ids.into_iter().map(|id| (id, Vec::new())));
         }
       }
     }
 
-    // Mark outpoint balances as freezable
+    // Add outpoint balances to map if freezable
     for outpoint in outpoints {
-      // Get the runes at this outpoint
-      let mut outpoint_runes: HashSet<RuneId> = HashSet::new();
-
       let Some(guard) = self.outpoint_to_balances.get(&outpoint.store())? else {
         continue;
       };
@@ -398,19 +487,14 @@ impl RuneUpdater<'_, '_, '_> {
         i += len;
 
         if balance > 0 {
-          outpoint_runes.insert(id);
-        }
-      }
-
-      // Add the freezable runes at this outpoint to the list of freezable balances
-      for id in &runes_to_freeze {
-        if outpoint_runes.contains(id) {
-          freezable_balances.push((outpoint, *id));
+          freezables_balances_by_id
+            .entry(id)
+            .and_modify(|balances| balances.push((outpoint, Lot(balance))));
         }
       }
     }
 
-    Ok(freezable_balances)
+    Ok(freezables_balances_by_id)
   }
 
   fn create_rune_entry(
@@ -647,7 +731,7 @@ impl RuneUpdater<'_, '_, '_> {
     Ok(false)
   }
 
-  fn unallocated(&mut self, tx: &Transaction, txid: Txid) -> Result<HashMap<RuneId, Lot>> {
+  fn unallocated(&mut self, tx: &Transaction) -> Result<HashMap<RuneId, Lot>> {
     // map of rune ID to un-allocated balance of that rune
     let mut unallocated: HashMap<RuneId, Lot> = HashMap::new();
 
@@ -658,13 +742,16 @@ impl RuneUpdater<'_, '_, '_> {
         .remove(&input.previous_output.store())?
       {
         let frozen_runes = self
-          .outpoint_to_frozen_rune_id
-          .remove_all(&input.previous_output.store())?
-          .filter_map(|rune_id| {
-            let guard = rune_id.ok()?;
-            Some(RuneId::load(guard.value()))
+          .outpoint_to_frozen_rune_balance
+          .get(&input.previous_output.store())?
+          .filter_map(|guard| {
+            let buffer = guard.ok()?;
+            let ((id, _), _) = Index::decode_rune_balance(buffer.value()).unwrap();
+            Some(id)
           })
           .collect::<HashSet<RuneId>>();
+
+        let mut remove_outpoint_to_script_pubkey = true;
 
         let buffer = guard.value();
         let mut i = 0;
@@ -673,16 +760,21 @@ impl RuneUpdater<'_, '_, '_> {
           i += len;
 
           if frozen_runes.contains(&id) {
-            // Burn rune if transferred while frozen
-            *self.burned.entry(id).or_default() += balance;
+            if !remove_outpoint_to_script_pubkey {
+              continue;
+            }
 
-            if let Some(sender) = self.event_sender {
-              sender.blocking_send(Event::RuneBurned {
-                block_height: self.height,
-                txid,
-                rune_id: id,
-                amount: balance,
-              })?;
+            if let Some(script_pubkey) = self
+              .outpoint_to_script_pubkey
+              .get(&input.previous_output.store())?
+            {
+              self
+                .script_pubkey_to_spent_frozen_outpoint
+                .insert(&script_pubkey.value(), &input.previous_output.store())?;
+
+              // While no longer needed for indexing, we keep the mapping from outpoint to
+              // script pubkey so that the wallet can use it
+              remove_outpoint_to_script_pubkey = false;
             }
           } else {
             *unallocated.entry(id).or_default() += balance;
@@ -695,6 +787,13 @@ impl RuneUpdater<'_, '_, '_> {
           .remove(&input.previous_output.store())?
         {
           self.outpoint_id_to_outpoint.remove(outpoint_id.value())?;
+        }
+
+        // Remove script pubkey mapping
+        if remove_outpoint_to_script_pubkey {
+          self
+            .outpoint_to_script_pubkey
+            .remove(&input.previous_output.store())?;
         }
       }
     }
