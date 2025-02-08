@@ -7204,11 +7204,15 @@ mod tests {
 
     pretty_assert_eq!(
       event_receiver.blocking_recv().unwrap(),
-      Event::RuneBurned {
+      Event::RuneLost {
         block_height: 22,
         txid: txid7,
         rune_id: id,
         amount: 889,
+        outpoint: OutPoint {
+          txid: txid3,
+          vout: 1,
+        },
       }
     );
   }

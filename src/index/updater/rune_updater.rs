@@ -679,11 +679,12 @@ impl RuneUpdater<'_, '_, '_> {
             *self.burned.entry(id).or_default() += balance;
 
             if let Some(sender) = self.event_sender {
-              sender.blocking_send(Event::RuneBurned {
+              sender.blocking_send(Event::RuneLost {
                 block_height: self.height,
                 txid,
                 rune_id: id,
                 amount: balance,
+                outpoint: input.previous_output,
               })?;
             }
           } else {
