@@ -62,6 +62,8 @@
   <dd>{{ Decimal { value: ((self.entry.premine as f64 / self.entry.supply() as f64) * 10000.0) as u128, scale: 2 } }}%</dd>
   <dt>burned</dt>
   <dd>{{ self.entry.pile(self.entry.burned) }}</dd>
+  <dt>lost</dt>
+  <dd>{{ self.entry.pile(self.entry.lost) }}</dd>
   <dt>divisibility</dt>
   <dd>{{ self.entry.divisibility }}</dd>
 %% if let Some(symbol) = self.entry.symbol {

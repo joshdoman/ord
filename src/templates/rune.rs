@@ -117,6 +117,8 @@ mod tests {
   <dd>0.12%</dd>
   <dt>burned</dt>
   <dd>123456789.123456789\u{A0}@</dd>
+  <dt>lost</dt>
+  <dd>987654321.987654321\u{A0}@</dd>
   <dt>divisibility</dt>
   <dd>9</dd>
   <dt>symbol</dt>
