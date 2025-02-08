@@ -47,6 +47,7 @@ mod tests {
         entry: RuneEntry {
           block: 1,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           divisibility: 9,
           etching: Txid::all_zeros(),
           mints: 100,
@@ -140,6 +141,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: None,
           divisibility: 9,
           etching: Txid::all_zeros(),
@@ -175,6 +177,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: None,
           divisibility: 9,
           etching: Txid::all_zeros(),
@@ -210,6 +213,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: Some(Terms {
             cap: None,
             offset: (None, None),
@@ -267,6 +271,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 0,
+          lost: 0,
           divisibility: 0,
           etching: Txid::all_zeros(),
           mints: 5555,
@@ -305,6 +310,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 0,
+          lost: 0,
           divisibility: 0,
           etching: Txid::all_zeros(),
           mints: 5555,

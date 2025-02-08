@@ -613,6 +613,7 @@ fn get_runes() {
       entry: RuneEntry {
         block: a.id.block,
         burned: 0,
+        lost: 0,
         terms: None,
         divisibility: 0,
         etching: a.output.reveal,
@@ -652,6 +653,7 @@ fn get_runes() {
           RuneEntry {
             block: c.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: c.output.reveal,
@@ -673,6 +675,7 @@ fn get_runes() {
           RuneEntry {
             block: b.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: b.output.reveal,
@@ -694,6 +697,7 @@ fn get_runes() {
           RuneEntry {
             block: a.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: a.output.reveal,

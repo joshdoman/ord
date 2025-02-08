@@ -436,6 +436,7 @@ impl RuneUpdater<'_, '_, '_> {
       Artifact::Cenotaph(_) => RuneEntry {
         block: id.block,
         burned: 0,
+        lost: 0,
         divisibility: 0,
         etching: txid,
         terms: None,
@@ -463,6 +464,7 @@ impl RuneUpdater<'_, '_, '_> {
         RuneEntry {
           block: id.block,
           burned: 0,
+          lost: 0,
           divisibility: divisibility.unwrap_or_default(),
           etching: txid,
           terms,

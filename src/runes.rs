@@ -859,6 +859,7 @@ mod tests {
         RuneEntry {
           block: id.block,
           burned: 0,
+          lost: 0,
           divisibility: 0,
           etching: txid0,
           terms: None,
@@ -6085,6 +6086,7 @@ mod tests {
           RuneEntry {
             block: 1,
             burned: 0,
+            lost: 0,
             divisibility: 0,
             etching: Txid::all_zeros(),
             mints: 0,

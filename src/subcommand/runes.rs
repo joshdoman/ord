@@ -9,6 +9,7 @@ pub struct Output {
 pub struct RuneInfo {
   pub block: u64,
   pub burned: u128,
+  pub lost: u128,
   pub divisibility: u8,
   pub etching: Txid,
   pub id: RuneId,
@@ -45,6 +46,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
           entry @ RuneEntry {
             block,
             burned,
+            lost,
             divisibility,
             etching,
             mints,
@@ -63,6 +65,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
             RuneInfo {
               block,
               burned,
+              lost,
               divisibility,
               etching,
               id,

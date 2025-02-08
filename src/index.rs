@@ -388,6 +388,7 @@ impl Index {
             RuneEntry {
               block: id.block,
               burned: 0,
+              lost: 0,
               divisibility: 0,
               etching,
               terms: Some(Terms {
