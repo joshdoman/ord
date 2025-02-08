@@ -56,7 +56,10 @@ impl RuneUpdater<'_, '_, '_> {
         }
 
         self.freeze(txid, runestone, &unallocated)?;
-        self.unfreeze(txid, runestone, &unallocated)?;
+
+        for (id, found) in self.unfreeze(txid, runestone, &unallocated)? {
+          *unallocated.entry(id).or_default() += found;
+        }
 
         for Edict { id, amount, output } in runestone.edicts.iter().copied() {
           let amount = Lot(amount);
@@ -277,18 +280,20 @@ impl RuneUpdater<'_, '_, '_> {
       return Ok(());
     };
 
-    for (outpoint, id) in self.get_freezable_outpoint_balances(&edict, unallocated)? {
-      self
-        .outpoint_to_frozen_rune_id
-        .insert(&outpoint.store(), &id.store())?;
+    for (id, outpoints) in self.get_freezable_balances_by_rune_id(&edict, unallocated)? {
+      for outpoint in outpoints {
+        self
+          .outpoint_to_frozen_rune_id
+          .insert(&outpoint.store(), &id.store())?;
 
-      if let Some(sender) = self.event_sender {
-        sender.blocking_send(Event::RuneFreezed {
-          block_height: self.height,
-          outpoint,
-          txid,
-          rune_id: id,
-        })?;
+        if let Some(sender) = self.event_sender {
+          sender.blocking_send(Event::RuneFreezed {
+            block_height: self.height,
+            outpoint,
+            txid,
+            rune_id: id,
+          })?;
+        }
       }
     }
 
@@ -300,35 +305,54 @@ impl RuneUpdater<'_, '_, '_> {
     txid: Txid,
     runestone: &Runestone,
     unallocated: &HashMap<RuneId, Lot>,
-  ) -> Result {
+  ) -> Result<HashMap<RuneId, Lot>> {
+    let mut found: HashMap<RuneId, Lot> = HashMap::new();
+
     let Some(edict) = runestone.unfreeze.clone() else {
-      return Ok(());
+      return Ok(found);
     };
 
-    for (outpoint, id) in self.get_freezable_outpoint_balances(&edict, unallocated)? {
-      self
-        .outpoint_to_frozen_rune_id
-        .remove(&outpoint.store(), &id.store())?;
+    for (id, outpoints) in self.get_freezable_balances_by_rune_id(&edict, unallocated)? {
+      for outpoint in outpoints {
+        self
+          .outpoint_to_frozen_rune_id
+          .remove(&outpoint.store(), &id.store())?;
 
-      if let Some(sender) = self.event_sender {
-        sender.blocking_send(Event::RuneUnfreezed {
-          block_height: self.height,
-          outpoint,
-          txid,
-          rune_id: id,
-        })?;
+        if let Some(sender) = self.event_sender {
+          sender.blocking_send(Event::RuneUnfreezed {
+            block_height: self.height,
+            outpoint,
+            txid,
+            rune_id: id,
+          })?;
+        }
+      }
+
+      // lookup lost balance of id
+      if let Some(entry) = self.id_to_entry.get(&id.store())? {
+        // include runes lost in this transaction
+        let rune_entry = RuneEntry::load(entry.value());
+        let lost_in_tx = self.lost.entry(id).or_default().0;
+        let lost = rune_entry.lost + lost_in_tx;
+
+        if lost > 0 {
+          found.insert(id, Lot(lost));
+
+          // set lost to zero so that entry is properly updated
+          self.lost.insert(id, Lot(0));
+        }
       }
     }
 
-    Ok(())
+    Ok(found)
   }
 
-  fn get_freezable_outpoint_balances(
-    &mut self,
+  fn get_freezable_balances_by_rune_id(
+    &self,
     edict: &FreezeEdict,
     unallocated: &HashMap<RuneId, Lot>,
-  ) -> Result<Vec<(OutPoint, RuneId)>> {
-    let mut freezable_balances = Vec::new();
+  ) -> Result<HashMap<RuneId, Vec<OutPoint>>> {
+    let mut freezables_balances_by_id = HashMap::<RuneId, Vec<OutPoint>>::new();
 
     // List of outpoints to freeze
     let mut outpoints: Vec<OutPoint> = Vec::new();
@@ -339,31 +363,30 @@ impl RuneUpdater<'_, '_, '_> {
       outpoints.push(OutPoint::load(outpoint_entry.value()));
     }
 
-    // List runes that the the unallocated runes can freeze
-    let mut runes_to_freeze: Vec<RuneId> = Vec::new();
+    // Add an empty entry for all runes that the unallocated runes can freeze
     if let Some(rune_id) = edict.rune_id {
       // Verify that we possess the rune that can freeze this rune id
       let Some(entry) = self.id_to_entry.get(&rune_id.store())? else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let rune_entry = RuneEntry::load(entry.value());
 
       let Some(freezer) = rune_entry.freezer else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let Some(freezer_rune_id_entry) = self.rune_to_id.get(&freezer.store())? else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
       let freezer_rune_id = RuneId::load(freezer_rune_id_entry.value());
 
       // Get the unallocated balance for the freezer rune
       let Some(balance) = unallocated.get(&freezer_rune_id) else {
-        return Ok(freezable_balances);
+        return Ok(freezables_balances_by_id);
       };
 
       // Verify that the freezer rune balance is non-zero
       if *balance > 0 {
-        runes_to_freeze.push(rune_id);
+        freezables_balances_by_id.insert(rune_id, Vec::new());
       }
     } else {
       // Add all runes that our input runes can freeze
@@ -384,16 +407,14 @@ impl RuneUpdater<'_, '_, '_> {
               Some(RuneId::load(guard.value()))
             })
             .collect::<Vec<RuneId>>();
-          runes_to_freeze.extend(freezable_ids);
+
+          freezables_balances_by_id.extend(freezable_ids.into_iter().map(|id| (id, Vec::new())));
         }
       }
     }
 
-    // Mark outpoint balances as freezable
+    // Add outpoint balances to map if freezable
     for outpoint in outpoints {
-      // Get the runes at this outpoint
-      let mut outpoint_runes: HashSet<RuneId> = HashSet::new();
-
       let Some(guard) = self.outpoint_to_balances.get(&outpoint.store())? else {
         continue;
       };
@@ -405,19 +426,14 @@ impl RuneUpdater<'_, '_, '_> {
         i += len;
 
         if balance > 0 {
-          outpoint_runes.insert(id);
-        }
-      }
-
-      // Add the freezable runes at this outpoint to the list of freezable balances
-      for id in &runes_to_freeze {
-        if outpoint_runes.contains(id) {
-          freezable_balances.push((outpoint, *id));
+          freezables_balances_by_id
+            .entry(id)
+            .and_modify(|balances| balances.push(outpoint));
         }
       }
     }
 
-    Ok(freezable_balances)
+    Ok(freezables_balances_by_id)
   }
 
   fn create_rune_entry(
