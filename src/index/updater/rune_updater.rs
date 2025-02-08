@@ -3,6 +3,7 @@ use super::*;
 pub(super) struct RuneUpdater<'a, 'tx, 'client> {
   pub(super) block_time: u32,
   pub(super) burned: HashMap<RuneId, Lot>,
+  pub(super) lost: HashMap<RuneId, Lot>,
   pub(super) client: &'client Client,
   pub(super) event_sender: Option<&'a mpsc::Sender<Event>>,
   pub(super) height: u32,
@@ -254,6 +255,12 @@ impl RuneUpdater<'_, '_, '_> {
     for (rune_id, burned) in self.burned {
       let mut entry = RuneEntry::load(self.id_to_entry.get(&rune_id.store())?.unwrap().value());
       entry.burned = entry.burned.checked_add(burned.n()).unwrap();
+      self.id_to_entry.insert(&rune_id.store(), entry.store())?;
+    }
+
+    for (rune_id, lost) in self.lost {
+      let mut entry = RuneEntry::load(self.id_to_entry.get(&rune_id.store())?.unwrap().value());
+      entry.lost = entry.lost.checked_add(lost.n()).unwrap();
       self.id_to_entry.insert(&rune_id.store(), entry.store())?;
     }
 
@@ -675,8 +682,8 @@ impl RuneUpdater<'_, '_, '_> {
           i += len;
 
           if frozen_runes.contains(&id) {
-            // Burn rune if transferred while frozen
-            *self.burned.entry(id).or_default() += balance;
+            // Mark rune as lost if transferred while frozen
+            *self.lost.entry(id).or_default() += balance;
 
             if let Some(sender) = self.event_sender {
               sender.blocking_send(Event::RuneLost {

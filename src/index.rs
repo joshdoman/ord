@@ -7166,7 +7166,8 @@ mod tests {
             }),
             timestamp: 8,
             mints: 1,
-            burned: 1000,
+            burned: 111,
+            lost: 889,
             freezer: Some(Rune(FREEZER)),
             ..Default::default()
           },

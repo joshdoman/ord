@@ -7587,7 +7587,7 @@ mod tests {
   }
 
   #[test]
-  fn burn_frozen_balance_if_spent() {
+  fn add_frozen_balance_to_lost_runes_if_spent() {
     let context = Context::builder().arg("--index-runes").build();
 
     let (txid0, id) = context.etch(
@@ -7798,7 +7798,8 @@ mod tests {
               spacers: 0,
             },
             premine: u128::MAX,
-            burned: u128::MAX,
+            burned: 0,
+            lost: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
             freezer: Some(Rune(FREEZER)),

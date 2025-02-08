@@ -371,6 +371,8 @@ fn batch(core: &mockcore::Handle, ord: &TestServer, batchfile: batch::File) -> E
   <dd>.*</dd>
   <dt>burned</dt>
   <dd>0 {symbol}</dd>
+  <dt>lost</dt>
+  <dd>0 {symbol}</dd>
   <dt>divisibility</dt>
   <dd>{divisibility}</dd>
   <dt>symbol</dt>
