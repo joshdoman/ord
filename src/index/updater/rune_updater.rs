@@ -34,7 +34,7 @@ impl RuneUpdater<'_, '_, '_> {
 
     if let Some(artifact) = &artifact {
       if let Some(id) = artifact.mint() {
-        if let Some(amount) = self.mint(id)? {
+        if let Some(amount) = self.mint(id, &unallocated)? {
           *unallocated.entry(id).or_default() += amount;
 
           if let Some(sender) = self.event_sender {
@@ -601,12 +601,30 @@ impl RuneUpdater<'_, '_, '_> {
     )))
   }
 
-  fn mint(&mut self, id: RuneId) -> Result<Option<Lot>> {
+  fn mint(&mut self, id: RuneId, unallocated: &HashMap<RuneId, Lot>) -> Result<Option<Lot>> {
     let Some(entry) = self.id_to_entry.get(&id.store())? else {
       return Ok(None);
     };
 
     let mut rune_entry = RuneEntry::load(entry.value());
+
+    // Forbid minting if the minter tag is present and the minter rune is not unallocated
+    if let Some(minter) = rune_entry.minter {
+      let Some(minter_rune_id_entry) = self.rune_to_id.get(&minter.store())? else {
+        return Ok(None);
+      };
+      let minter_rune_id = RuneId::load(minter_rune_id_entry.value());
+
+      // Get the unallocated balance for the minter rune
+      let Some(minter_balance) = unallocated.get(&minter_rune_id) else {
+        return Ok(None);
+      };
+
+      // Verify that the freezer rune balance is non-zero
+      if *minter_balance > 0 {
+        return Ok(None);
+      }
+    }
 
     let Ok(amount) = rune_entry.mintable(self.height.into()) else {
       return Ok(None);
