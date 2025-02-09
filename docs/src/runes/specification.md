@@ -593,4 +593,9 @@ all runes that are freezable by unallocated runes.
 A freeze (or unfreeze) edict freezes (or unfreezes) balances at all `outpoints`
 authorized to be frozen (or unfrozen).
 
-A frozen balance is burned if the outpoint is spent while the balance is frozen.
+A frozen balance is declared lost if the outpoint is spent while the balance is frozen.
+
+The lost runes of `rune_id` will be collected by the first transaction with an unfreeze 
+edict authorized to unfreeze `rune_id`. Collected runes are added to the transaction's 
+unallocated balance. This provides a way for the freezer to return lost runes that would 
+otherwise be unfrozen.
