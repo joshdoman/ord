@@ -55,6 +55,8 @@ etching:
   turbo: true
   # name of rune that can freeze and unfreeze this rune (optional)
   freezer: THE•BEST•RUNE•FREEZER
+  # name of rune that can mint this rune (optional)
+  minter: THE•BEST•RUNE•MINTER
 
 # inscriptions to inscribe
 inscriptions:

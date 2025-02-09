@@ -393,6 +393,7 @@ inscriptions:
           }),
           turbo: true,
           freezer: Some("THE•BEST•RUNE•FREEZER".parse().unwrap()),
+          minter: Some("THE•BEST•RUNE•MINTER".parse().unwrap()),
         }),
         inscriptions: vec![
           batch::Entry {

@@ -1075,6 +1075,7 @@ fn sending_rune_with_divisibility_works() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
