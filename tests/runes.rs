@@ -65,6 +65,7 @@ fn one_rune() {
           timestamp: ord::timestamp(7),
           turbo: false,
           freezer: None,
+          minter: None,
           tx: 1,
         }
       )]
@@ -113,6 +114,7 @@ fn two_runes() {
             timestamp: ord::timestamp(7),
             turbo: false,
             freezer: None,
+            minter: None,
             tx: 1,
           }
         ),
@@ -138,6 +140,7 @@ fn two_runes() {
             timestamp: ord::timestamp(14),
             turbo: false,
             freezer: None,
+            minter: None,
             tx: 1,
           }
         )

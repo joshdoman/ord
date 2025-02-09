@@ -408,6 +408,7 @@ impl Index {
               timestamp: 0,
               turbo: true,
               freezer: None,
+              minter: None,
             }
             .store(),
           )?;

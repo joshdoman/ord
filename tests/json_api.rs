@@ -628,6 +628,7 @@ fn get_runes() {
         timestamp: 10,
         turbo: false,
         freezer: None,
+        minter: None,
       },
       id: RuneId { block: 10, tx: 1 },
       mintable: false,
@@ -668,6 +669,7 @@ fn get_runes() {
             timestamp: 24,
             turbo: false,
             freezer: None,
+            minter: None,
           }
         ),
         (
@@ -690,6 +692,7 @@ fn get_runes() {
             timestamp: 17,
             turbo: false,
             freezer: None,
+            minter: None,
           }
         ),
         (
@@ -712,6 +715,7 @@ fn get_runes() {
             timestamp: 10,
             turbo: false,
             freezer: None,
+            minter: None,
           }
         )
       ],
