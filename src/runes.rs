@@ -7833,4 +7833,1380 @@ mod tests {
       [],
     );
   }
+
+  #[test]
+  fn collect_lost_balance_if_authorized_unfreeze_edict_is_issued() {
+    let context = Context::builder().arg("--index-runes").build();
+
+    let (txid0, id) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(RUNE)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [(
+        id,
+        RuneEntry {
+          block: id.block,
+          etching: txid0,
+          spaced_rune: SpacedRune {
+            rune: Rune(RUNE),
+            spacers: 0,
+          },
+          premine: u128::MAX,
+          symbol: Some('$'),
+          timestamp: id.block,
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        },
+      )],
+      [(
+        OutPoint {
+          txid: txid0,
+          vout: 0,
+        },
+        vec![(id, u128::MAX)],
+      )],
+    );
+
+    let (txid1, freezer_id) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(FREEZER)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+    );
+
+    let txid2 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          freeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![OutPointId::new(id.block, 1, 0).unwrap()],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    let txid2_block_count = context.index.block_count().unwrap().into_usize();
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [(
+        OutPoint {
+          txid: txid2,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
+      [(
+        OutPoint {
+          txid: txid0,
+          vout: 0,
+        },
+        vec![(id, u128::MAX)],
+      )],
+    );
+
+    context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            burned: 0,
+            lost: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [(
+        OutPoint {
+          txid: txid2,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
+      [],
+    );
+
+    let txid3 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(txid2_block_count - 1, 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          unfreeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            burned: 0,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+      (
+        OutPoint {
+          txid: txid3,
+          vout: 0,
+        },
+        vec![(id, u128::MAX), (freezer_id, u128::MAX)],
+      )],
+      [],
+    );
+  }
+
+  #[test]
+  fn collect_multiple_lost_balances_if_authorized_unfreeze_edict_is_issued() {
+    let context = Context::builder().arg("--index-runes").build();
+
+    const RUNE2: u128 = RUNE + 2;
+
+    let (txid0, id0) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(RUNE)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [(
+        id0,
+        RuneEntry {
+          block: id0.block,
+          etching: txid0,
+          spaced_rune: SpacedRune {
+            rune: Rune(RUNE),
+            spacers: 0,
+          },
+          premine: u128::MAX,
+          symbol: Some('$'),
+          timestamp: id0.block,
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        },
+      )],
+      [(
+        OutPoint {
+          txid: txid0,
+          vout: 0,
+        },
+        vec![(id0, u128::MAX)],
+      )],
+    );
+
+    let (txid1, id1) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(RUNE2)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [
+        (
+          id0,
+          RuneEntry {
+            block: id0.block,
+            etching: txid0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id0.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          id1,
+          RuneEntry {
+            block: id1.block,
+            etching: txid1,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE2),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            number: 1,
+            timestamp: id1.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        )
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id0, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(id1, u128::MAX)],
+        )
+      ],
+    );
+
+    let (txid2, freezer_id) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(FREEZER)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [
+        (
+          id0,
+          RuneEntry {
+            block: id0.block,
+            etching: txid0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id0.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          id1,
+          RuneEntry {
+            block: id1.block,
+            etching: txid1,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE2),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            number: 1,
+            timestamp: id1.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid2,
+            number: 2,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id0, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(id1, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid2,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+    );
+
+    let txid3 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          freeze: Some(FreezeEdict {
+            rune_id: None,
+            outpoints: vec![
+              OutPointId::new(id0.block, 1, 0).unwrap(),
+              OutPointId::new(id1.block, 1, 0).unwrap()
+            ],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    let txid3_block_count = context.index.block_count().unwrap().into_usize();
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id0,
+          RuneEntry {
+            block: id0.block,
+            etching: txid0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id0.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          id1,
+          RuneEntry {
+            block: id1.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE2),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id1.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid2,
+            number: 2,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid3,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id0, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(id1, u128::MAX)],
+        ),
+      ]
+    );
+
+    context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[
+        (id0.block.try_into().unwrap(), 1, 0, Witness::new()),
+        (id1.block.try_into().unwrap(), 1, 0, Witness::new()),
+      ],
+      outputs: 1,
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id0,
+          RuneEntry {
+            block: id0.block,
+            etching: txid0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id0.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          id1,
+          RuneEntry {
+            block: id1.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE2),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id1.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid2,
+            number: 2,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid3,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+      []
+    );
+
+    let txid4 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(txid3_block_count - 1, 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          unfreeze: Some(FreezeEdict {
+            rune_id: None,
+            outpoints: vec![],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id0,
+          RuneEntry {
+            block: id0.block,
+            etching: txid0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: id0.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          id1,
+          RuneEntry {
+            block: id1.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE2),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: id1.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid2,
+            number: 2,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid4,
+            vout: 0,
+          },
+          vec![
+            (id0, u128::MAX),
+            (id1, u128::MAX),
+            (freezer_id, u128::MAX),
+          ],
+        ),
+      ],
+      []
+    );
+  }
+
+  #[test]
+  fn collect_lost_balance_of_runes_lost_in_same_block() {
+    let context = Context::builder().arg("--index-runes").build();
+
+    let (txid0, id) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(RUNE)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [(
+        id,
+        RuneEntry {
+          block: id.block,
+          etching: txid0,
+          spaced_rune: SpacedRune {
+            rune: Rune(RUNE),
+            spacers: 0,
+          },
+          premine: u128::MAX,
+          symbol: Some('$'),
+          timestamp: id.block,
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        },
+      )],
+      [(
+        OutPoint {
+          txid: txid0,
+          vout: 0,
+        },
+        vec![(id, u128::MAX)],
+      )],
+    );
+
+    let (txid1, freezer_id) = context.etch(
+      Runestone {
+        edicts: vec![Edict {
+          id: RuneId::default(),
+          amount: u128::MAX,
+          output: 0,
+        }],
+        etching: Some(Etching {
+          rune: Some(Rune(FREEZER)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id, u128::MAX)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+    );
+
+    let txid2 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          freeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![OutPointId::new(id.block, 1, 0).unwrap()],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    let txid2_block_count = context.index.block_count().unwrap().into_usize();
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [(
+        OutPoint {
+          txid: txid2,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
+      [(
+        OutPoint {
+          txid: txid0,
+          vout: 0,
+        },
+        vec![(id, u128::MAX)],
+      )],
+    );
+
+    context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      ..default()
+    });
+
+    let txid3 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(txid2_block_count - 1, 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          unfreeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            burned: 0,
+            lost: 0,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+      (
+        OutPoint {
+          txid: txid3,
+          vout: 0,
+        },
+        vec![(id, u128::MAX), (freezer_id, u128::MAX)],
+      )],
+      [],
+    );
+  }
+
+  #[test]
+  fn reset_lost_balance_mid_block_if_runes_lost_after_being_collected() {
+    let context = Context::builder().arg("--index-runes").build();
+
+    let (txid0, id) = context.etch(
+      Runestone {
+        edicts: vec![
+          Edict {
+            id: RuneId::default(),
+            amount: 1000,
+            output: 0,
+          },
+          Edict {
+            id: RuneId::default(),
+            amount: 500,
+            output: 1,
+          }
+        ],
+        etching: Some(Etching {
+          rune: Some(Rune(RUNE)),
+          symbol: Some('$'),
+          premine: Some(1500),
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        }),
+        ..default()
+      },
+      2,
+    );
+
+    context.assert_runes(
+      [(
+        id,
+        RuneEntry {
+          block: id.block,
+          etching: txid0,
+          spaced_rune: SpacedRune {
+            rune: Rune(RUNE),
+            spacers: 0,
+          },
+          premine: 1500,
+          symbol: Some('$'),
+          timestamp: id.block,
+          freezer: Some(Rune(FREEZER)),
+          ..default()
+        },
+      )],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id, 1000)],
+        ),
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 1,
+          },
+          vec![(id, 500)],
+        ),
+      ],
+    );
+
+    let (txid1, freezer_id) = context.etch(
+      Runestone {
+        etching: Some(Etching {
+          rune: Some(Rune(FREEZER)),
+          symbol: Some('$'),
+          premine: Some(u128::MAX),
+          ..default()
+        }),
+        ..default()
+      },
+      1,
+    );
+
+    context.assert_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: 1500,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id, 1000)],
+        ),
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 1,
+          },
+          vec![(id, 500)],
+        ),
+        (
+          OutPoint {
+            txid: txid1,
+            vout: 0,
+          },
+          vec![(freezer_id, u128::MAX)],
+        ),
+      ],
+    );
+
+    let txid2 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      op_return: Some(
+        Runestone {
+          freeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![
+              OutPointId::new(id.block, 1, 0).unwrap(),
+              OutPointId::new(id.block, 1, 1).unwrap(),
+            ],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    let txid2_block_count = context.index.block_count().unwrap().into_usize();
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: 1500,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [(
+        OutPoint {
+          txid: txid2,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
+      [
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 0,
+          },
+          vec![(id, 1000)],
+        ),
+        (
+          OutPoint {
+            txid: txid0,
+            vout: 1,
+          },
+          vec![(id, 500)],
+        ),
+      ],
+    );
+
+    context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      outputs: 1,
+      ..default()
+    });
+
+    let txid3 = context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(txid2_block_count - 1, 1, 0, Witness::new())],
+      outputs: 2,
+      op_return: Some(
+        Runestone {
+          unfreeze: Some(FreezeEdict {
+            rune_id: Some(id),
+            outpoints: vec![],
+          }),
+          ..default()
+        }
+        .encipher(),
+      ),
+      ..default()
+    });
+
+    context.core.broadcast_tx(TransactionTemplate {
+      inputs: &[(id.block.try_into().unwrap(), 1, 1, Witness::new())],
+      outputs: 1,
+      ..default()
+    });
+
+    context.mine_blocks(1);
+
+    context.assert_runes_and_frozen_runes(
+      [
+        (
+          id,
+          RuneEntry {
+            block: id.block,
+            etching: txid0,
+            number: 0,
+            spaced_rune: SpacedRune {
+              rune: Rune(RUNE),
+              spacers: 0,
+            },
+            premine: 1500,
+            burned: 0,
+            lost: 500,
+            symbol: Some('$'),
+            timestamp: id.block,
+            freezer: Some(Rune(FREEZER)),
+            ..default()
+          },
+        ),
+        (
+          freezer_id,
+          RuneEntry {
+            block: freezer_id.block,
+            etching: txid1,
+            number: 1,
+            spaced_rune: SpacedRune {
+              rune: Rune(FREEZER),
+              spacers: 0,
+            },
+            premine: u128::MAX,
+            symbol: Some('$'),
+            timestamp: freezer_id.block,
+            ..default()
+          },
+        ),
+      ],
+      [
+      (
+        OutPoint {
+          txid: txid3,
+          vout: 0,
+        },
+        vec![(id, 1000), (freezer_id, u128::MAX)],
+      )],
+      [],
+    );
+  }
 }

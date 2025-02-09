@@ -329,18 +329,26 @@ impl RuneUpdater<'_, '_, '_> {
       }
 
       // lookup lost balance of id
-      if let Some(entry) = self.id_to_entry.get(&id.store())? {
-        // include runes lost in this transaction
-        let rune_entry = RuneEntry::load(entry.value());
-        let lost_in_tx = self.lost.entry(id).or_default().0;
-        let lost = rune_entry.lost + lost_in_tx;
+      let Some(entry) = self.id_to_entry.get(&id.store())? else {
+        continue;
+      };
 
-        if lost > 0 {
-          found.insert(id, Lot(lost));
+      // include runes lost in this block
+      let mut rune_entry = RuneEntry::load(entry.value());
+      let lost_in_block = self.lost.entry(id).or_default().0;
+      let lost = rune_entry.lost + lost_in_block;
 
-          // set lost to zero so that entry is properly updated
-          self.lost.insert(id, Lot(0));
-        }
+      drop(entry);
+
+      if lost > 0 {
+        found.insert(id, Lot(lost));
+
+        // reset lost counter for the current block
+        self.lost.insert(id, Lot(0));
+
+        // reset lost counter for entry
+        rune_entry.lost = 0;
+        self.id_to_entry.insert(&id.store(), rune_entry.store())?;
       }
     }
 
