@@ -411,6 +411,7 @@ impl Index {
               turbo: true,
               freezer: None,
               minter: None,
+              minted_by_edict: 0,
             }
             .store(),
           )?;

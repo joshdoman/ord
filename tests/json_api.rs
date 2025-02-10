@@ -629,6 +629,7 @@ fn get_runes() {
         turbo: false,
         freezer: None,
         minter: None,
+        minted_by_edict: 0,
       },
       id: RuneId { block: 10, tx: 1 },
       mintable: false,
@@ -670,6 +671,7 @@ fn get_runes() {
             turbo: false,
             freezer: None,
             minter: None,
+            minted_by_edict: 0,
           }
         ),
         (
@@ -693,6 +695,7 @@ fn get_runes() {
             turbo: false,
             freezer: None,
             minter: None,
+            minted_by_edict: 0,
           }
         ),
         (
@@ -716,6 +719,7 @@ fn get_runes() {
             turbo: false,
             freezer: None,
             minter: None,
+            minted_by_edict: 0,
           }
         )
       ],

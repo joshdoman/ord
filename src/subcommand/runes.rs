@@ -60,6 +60,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
             turbo,
             freezer,
             minter,
+            ..
           },
         )| {
           (
