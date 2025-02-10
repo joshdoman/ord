@@ -92,15 +92,21 @@ impl RuneUpdater<'_, '_, '_> {
 
           let balance: &mut Lot = if let Some(entry) = entries_edicts_may_mint.get(&id) {
             let mintable = entry.1;
-            if amount > 0 {
+            if mintable == 0 {
+              match unallocated.get_mut(&id) {
+                Some(balance) => balance,
+                None => continue,
+              } 
+            } else if amount > 0 {
               &mut amount.min(mintable)
             } else {
               &mut mintable.clone()
             }
-          } else if let Some(balance) = unallocated.get_mut(&id) {
-            balance
           } else {
-            continue;
+            match unallocated.get_mut(&id) {
+              Some(balance) => balance,
+              None => continue,
+            }
           };
 
           let mut allocate = |balance: &mut Lot, amount: Lot, output: usize| {
