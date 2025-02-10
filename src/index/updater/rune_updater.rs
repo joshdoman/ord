@@ -32,28 +32,29 @@ impl RuneUpdater<'_, '_, '_> {
 
     let mut allocated: Vec<HashMap<RuneId, Lot>> = vec![HashMap::new(); tx.output.len()];
 
-    let mut entries_edicts_may_mint = HashMap::<RuneId, RuneEntry>::new();
+    let mut entries_edicts_may_mint = HashMap::<RuneId, (RuneEntry, Lot)>::new();
     let mut initial_minted_by_edict = HashMap::<RuneId, u128>::new();
 
     if let Some(artifact) = &artifact {
       if let Some(id) = artifact.mint() {
-        let (amount, entry_edicts_may_mint) = self.mint(id, &unallocated)?;
-        if let Some(amount) = amount {
-          *unallocated.entry(id).or_default() += amount;
+        for (mintable_amount, entry_edicts_may_mint) in self.mint(id, &unallocated)? {
+          if let Some(entry) = entry_edicts_may_mint {
+            entries_edicts_may_mint.insert(id, (entry, mintable_amount));
+            initial_minted_by_edict.insert(id, entry.minted_by_edict);
+
+            continue;
+          }
+
+          *unallocated.entry(id).or_default() += mintable_amount;
 
           if let Some(sender) = self.event_sender {
             sender.blocking_send(Event::RuneMinted {
               block_height: self.height,
               txid,
               rune_id: id,
-              amount: amount.n(),
+              amount: mintable_amount.n(),
             })?;
           }
-        }
-
-        if let Some(entry) = entry_edicts_may_mint {
-          entries_edicts_may_mint.insert(id, entry);
-          initial_minted_by_edict.insert(id, entry.minted_by_edict);
         }
       }
 
@@ -90,7 +91,7 @@ impl RuneUpdater<'_, '_, '_> {
           };
 
           let balance: &mut Lot = if let Some(entry) = entries_edicts_may_mint.get(&id) {
-            let mintable = Lot(entry.mintable(self.height.into()).unwrap_or_default());
+            let mintable = entry.1;
             if amount > 0 {
               &mut amount.min(mintable)
             } else {
@@ -108,7 +109,7 @@ impl RuneUpdater<'_, '_, '_> {
               *allocated[output].entry(id).or_default() += amount;
 
               if let Some(entry) = entries_edicts_may_mint.get_mut(&id) {
-                entry.minted_by_edict += amount.n();
+                entry.0.minted_by_edict += amount.n();
               }
             }
           };
@@ -162,7 +163,7 @@ impl RuneUpdater<'_, '_, '_> {
       }
 
       for (id, entry) in entries_edicts_may_mint {
-        self.id_to_entry.insert(&id.store(), entry.store())?;
+        self.id_to_entry.insert(&id.store(), entry.0.store())?;
 
         if let Some(sender) = self.event_sender {
           if let Some(initial_minted_by_edict) = initial_minted_by_edict.get(&id) {
@@ -170,7 +171,7 @@ impl RuneUpdater<'_, '_, '_> {
               block_height: self.height,
               txid,
               rune_id: id,
-              amount: entry.minted_by_edict - initial_minted_by_edict,
+              amount: entry.0.minted_by_edict - initial_minted_by_edict,
             })?;
           }
         }
@@ -644,9 +645,11 @@ impl RuneUpdater<'_, '_, '_> {
     &mut self,
     id: RuneId,
     unallocated: &HashMap<RuneId, Lot>,
-  ) -> Result<(Option<Lot>, Option<RuneEntry>)> {
+  ) -> Result<Vec<(Lot, Option<RuneEntry>)>> {
+    let mut result = Vec::new();
+
     let Some(entry) = self.id_to_entry.get(&id.store())? else {
-      return Ok((None, None));
+      return Ok(result);
     };
 
     let mut rune_entry = RuneEntry::load(entry.value());
@@ -654,23 +657,23 @@ impl RuneUpdater<'_, '_, '_> {
     // forbid minting if the minter tag is present and the minter rune is not unallocated
     if let Some(minter) = rune_entry.minter {
       let Some(minter_rune_id_entry) = self.rune_to_id.get(&minter.store())? else {
-        return Ok((None, None));
+        return Ok(result);
       };
       let minter_rune_id = RuneId::load(minter_rune_id_entry.value());
 
       // get the unallocated balance for the minter rune
       let Some(minter_balance) = unallocated.get(&minter_rune_id) else {
-        return Ok((None, None));
+        return Ok(result);
       };
 
       // verify that the freezer rune balance is non-zero
       if *minter_balance > 0 {
-        return Ok((None, None));
+        return Ok(result);
       }
     }
 
     let Ok(amount) = rune_entry.mintable(self.height.into()) else {
-      return Ok((None, None));
+      return Ok(result);
     };
 
     drop(entry);
@@ -679,11 +682,12 @@ impl RuneUpdater<'_, '_, '_> {
 
     self.id_to_entry.insert(&id.store(), rune_entry.store())?;
 
-    if rune_entry.is_mintable_by_edict() {
-      Ok((None, Some(rune_entry)))
-    } else {
-      Ok((Some(Lot(amount)), None))
-    }
+    result.push((
+      Lot(amount),
+      Some(rune_entry).filter(|_| rune_entry.is_mintable_by_edict()),
+    ));
+
+    Ok(result)
   }
 
   fn tx_commits_to_rune(&self, tx: &Transaction, rune: Rune) -> Result<bool> {
