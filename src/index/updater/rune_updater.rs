@@ -110,6 +110,7 @@ impl RuneUpdater<'_, '_, '_> {
 
               if let Some(entry) = entries_edicts_may_mint.get_mut(&id) {
                 entry.0.minted_by_edict += amount.n();
+                entry.1 -= amount;
               }
             }
           };
