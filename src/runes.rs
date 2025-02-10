@@ -8139,8 +8139,7 @@ mod tests {
           },
         ),
       ],
-      [
-      (
+      [(
         OutPoint {
           txid: txid3,
           vout: 0,
@@ -8255,7 +8254,7 @@ mod tests {
             freezer: Some(Rune(FREEZER)),
             ..default()
           },
-        )
+        ),
       ],
       [
         (
@@ -8271,7 +8270,7 @@ mod tests {
             vout: 0,
           },
           vec![(id1, u128::MAX)],
-        )
+        ),
       ],
     );
 
@@ -8379,7 +8378,7 @@ mod tests {
             rune_id: None,
             outpoints: vec![
               OutPointId::new(id0.block, 1, 0).unwrap(),
-              OutPointId::new(id1.block, 1, 0).unwrap()
+              OutPointId::new(id1.block, 1, 0).unwrap(),
             ],
           }),
           ..default()
@@ -8445,15 +8444,13 @@ mod tests {
           },
         ),
       ],
-      [
-        (
-          OutPoint {
-            txid: txid3,
-            vout: 0,
-          },
-          vec![(freezer_id, u128::MAX)],
-        ),
-      ],
+      [(
+        OutPoint {
+          txid: txid3,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
       [
         (
           OutPoint {
@@ -8469,7 +8466,7 @@ mod tests {
           },
           vec![(id1, u128::MAX)],
         ),
-      ]
+      ],
     );
 
     context.core.broadcast_tx(TransactionTemplate {
@@ -8538,16 +8535,14 @@ mod tests {
           },
         ),
       ],
-      [
-        (
-          OutPoint {
-            txid: txid3,
-            vout: 0,
-          },
-          vec![(freezer_id, u128::MAX)],
-        ),
-      ],
-      []
+      [(
+        OutPoint {
+          txid: txid3,
+          vout: 0,
+        },
+        vec![(freezer_id, u128::MAX)],
+      )],
+      [],
     );
 
     let txid4 = context.core.broadcast_tx(TransactionTemplate {
@@ -8623,20 +8618,14 @@ mod tests {
           },
         ),
       ],
-      [
-        (
-          OutPoint {
-            txid: txid4,
-            vout: 0,
-          },
-          vec![
-            (id0, u128::MAX),
-            (id1, u128::MAX),
-            (freezer_id, u128::MAX),
-          ],
-        ),
-      ],
-      []
+      [(
+        OutPoint {
+          txid: txid4,
+          vout: 0,
+        },
+        vec![(id0, u128::MAX), (id1, u128::MAX), (freezer_id, u128::MAX)],
+      )],
+      [],
     );
   }
 
@@ -8895,8 +8884,7 @@ mod tests {
           },
         ),
       ],
-      [
-      (
+      [(
         OutPoint {
           txid: txid3,
           vout: 0,
@@ -8923,7 +8911,7 @@ mod tests {
             id: RuneId::default(),
             amount: 500,
             output: 1,
-          }
+          },
         ],
         etching: Some(Etching {
           rune: Some(Rune(RUNE)),
@@ -9198,8 +9186,7 @@ mod tests {
           },
         ),
       ],
-      [
-      (
+      [(
         OutPoint {
           txid: txid3,
           vout: 0,

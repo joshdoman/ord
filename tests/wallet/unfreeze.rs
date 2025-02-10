@@ -726,7 +726,16 @@ fn wallet_can_unfreeze_no_outpoints_to_collect_lost_balance() {
 
   assert_eq!(balance.runes.clone().unwrap().get(&rune), None);
 
-  assert_eq!(balance.frozen_runes.clone().unwrap().get(&rune).unwrap().value, 1000);
+  assert_eq!(
+    balance
+      .frozen_runes
+      .clone()
+      .unwrap()
+      .get(&rune)
+      .unwrap()
+      .value,
+    1000
+  );
 
   assert_eq!(balance.runic.unwrap(), 19867);
 
@@ -749,7 +758,16 @@ fn wallet_can_unfreeze_no_outpoints_to_collect_lost_balance() {
 
   assert_eq!(balance.runes.clone().unwrap().get(&rune), None);
 
-  assert_eq!(balance.frozen_runes.clone().unwrap().get(&rune).unwrap().value, 1000);
+  assert_eq!(
+    balance
+      .frozen_runes
+      .clone()
+      .unwrap()
+      .get(&rune)
+      .unwrap()
+      .value,
+    1000
+  );
 
   assert_eq!(balance.runic.unwrap(), 20000);
 }
