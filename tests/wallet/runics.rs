@@ -25,6 +25,7 @@ fn wallet_runics() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

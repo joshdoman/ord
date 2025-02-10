@@ -11,6 +11,7 @@ pub(super) struct RuneUpdater<'a, 'tx, 'client> {
   pub(super) inscription_id_to_sequence_number: &'a Table<'tx, InscriptionIdValue, u32>,
   pub(super) minimum: Rune,
   pub(super) rune_to_freezable_rune_id: &'a mut MultimapTable<'tx, u128, RuneIdValue>,
+  pub(super) rune_to_mintable_rune_id: &'a mut MultimapTable<'tx, u128, RuneIdValue>,
   pub(super) outpoint_id_to_outpoint: &'a mut Table<'tx, OutPointIdValue, OutPointValue>,
   pub(super) outpoint_to_outpoint_id: &'a mut Table<'tx, &'static OutPointValue, OutPointIdValue>,
   pub(super) outpoint_to_balances: &'a mut Table<'tx, &'static OutPointValue, &'static [u8]>,
@@ -31,17 +32,27 @@ impl RuneUpdater<'_, '_, '_> {
 
     let mut allocated: Vec<HashMap<RuneId, Lot>> = vec![HashMap::new(); tx.output.len()];
 
+    let mut entries_edicts_may_mint = HashMap::<RuneId, (RuneEntry, Lot)>::new();
+    let mut initial_minted_by_edict = HashMap::<RuneId, u128>::new();
+
     if let Some(artifact) = &artifact {
       if let Some(id) = artifact.mint() {
-        if let Some(amount) = self.mint(id)? {
-          *unallocated.entry(id).or_default() += amount;
+        for (mintable_amount, entry_edicts_may_mint) in self.mint(id, &unallocated)? {
+          if let Some(entry) = entry_edicts_may_mint {
+            entries_edicts_may_mint.insert(id, (entry, mintable_amount));
+            initial_minted_by_edict.insert(id, entry.minted_by_edict);
+
+            continue;
+          }
+
+          *unallocated.entry(id).or_default() += mintable_amount;
 
           if let Some(sender) = self.event_sender {
             sender.blocking_send(Event::RuneMinted {
               block_height: self.height,
               txid,
               rune_id: id,
-              amount: amount.n(),
+              amount: mintable_amount.n(),
             })?;
           }
         }
@@ -79,14 +90,34 @@ impl RuneUpdater<'_, '_, '_> {
             id
           };
 
-          let Some(balance) = unallocated.get_mut(&id) else {
-            continue;
+          let balance: &mut Lot = if let Some(entry) = entries_edicts_may_mint.get(&id) {
+            let mintable = entry.1;
+            if mintable == 0 {
+              match unallocated.get_mut(&id) {
+                Some(balance) => balance,
+                None => continue,
+              } 
+            } else if amount > 0 {
+              &mut amount.min(mintable)
+            } else {
+              &mut mintable.clone()
+            }
+          } else {
+            match unallocated.get_mut(&id) {
+              Some(balance) => balance,
+              None => continue,
+            }
           };
 
           let mut allocate = |balance: &mut Lot, amount: Lot, output: usize| {
             if amount > 0 {
               *balance -= amount;
               *allocated[output].entry(id).or_default() += amount;
+
+              if let Some(entry) = entries_edicts_may_mint.get_mut(&id) {
+                entry.0.minted_by_edict += amount.n();
+                entry.1 -= amount;
+              }
             }
           };
 
@@ -136,6 +167,21 @@ impl RuneUpdater<'_, '_, '_> {
 
       if let Some((id, rune)) = etched {
         self.create_rune_entry(txid, artifact, id, rune)?;
+      }
+
+      for (id, entry) in entries_edicts_may_mint {
+        self.id_to_entry.insert(&id.store(), entry.0.store())?;
+
+        if let Some(sender) = self.event_sender {
+          if let Some(initial_minted_by_edict) = initial_minted_by_edict.get(&id) {
+            sender.blocking_send(Event::RuneMinted {
+              block_height: self.height,
+              txid,
+              rune_id: id,
+              amount: entry.0.minted_by_edict - initial_minted_by_edict,
+            })?;
+          }
+        }
       }
     }
 
@@ -479,6 +525,8 @@ impl RuneUpdater<'_, '_, '_> {
         timestamp: self.block_time.into(),
         turbo: false,
         freezer: None,
+        minter: None,
+        minted_by_edict: 0,
       },
       Artifact::Runestone(Runestone { etching, .. }) => {
         let Etching {
@@ -489,6 +537,7 @@ impl RuneUpdater<'_, '_, '_> {
           symbol,
           turbo,
           freezer,
+          minter,
           ..
         } = etching.unwrap();
 
@@ -510,6 +559,8 @@ impl RuneUpdater<'_, '_, '_> {
           timestamp: self.block_time.into(),
           turbo,
           freezer,
+          minter,
+          minted_by_edict: 0,
         }
       }
     };
@@ -520,6 +571,10 @@ impl RuneUpdater<'_, '_, '_> {
       self
         .rune_to_freezable_rune_id
         .insert(freezer.0, id.store())?;
+    }
+
+    if let Some(minter) = entry.minter {
+      self.rune_to_mintable_rune_id.insert(minter.0, id.store())?;
     }
 
     if let Some(sender) = self.event_sender {
@@ -593,15 +648,39 @@ impl RuneUpdater<'_, '_, '_> {
     )))
   }
 
-  fn mint(&mut self, id: RuneId) -> Result<Option<Lot>> {
+  fn mint(
+    &mut self,
+    id: RuneId,
+    unallocated: &HashMap<RuneId, Lot>,
+  ) -> Result<Vec<(Lot, Option<RuneEntry>)>> {
+    let mut result = Vec::new();
+
     let Some(entry) = self.id_to_entry.get(&id.store())? else {
-      return Ok(None);
+      return Ok(result);
     };
 
     let mut rune_entry = RuneEntry::load(entry.value());
 
+    // forbid minting if the minter tag is present and the minter rune is not unallocated
+    if let Some(minter) = rune_entry.minter {
+      let Some(minter_rune_id_entry) = self.rune_to_id.get(&minter.store())? else {
+        return Ok(result);
+      };
+      let minter_rune_id = RuneId::load(minter_rune_id_entry.value());
+
+      // get the unallocated balance for the minter rune
+      let Some(minter_balance) = unallocated.get(&minter_rune_id) else {
+        return Ok(result);
+      };
+
+      // verify that the freezer rune balance is non-zero
+      if *minter_balance > 0 {
+        return Ok(result);
+      }
+    }
+
     let Ok(amount) = rune_entry.mintable(self.height.into()) else {
-      return Ok(None);
+      return Ok(result);
     };
 
     drop(entry);
@@ -610,7 +689,12 @@ impl RuneUpdater<'_, '_, '_> {
 
     self.id_to_entry.insert(&id.store(), rune_entry.store())?;
 
-    Ok(Some(Lot(amount)))
+    result.push((
+      Lot(amount),
+      Some(rune_entry).filter(|_| rune_entry.is_mintable_by_edict()),
+    ));
+
+    Ok(result)
   }
 
   fn tx_commits_to_rune(&self, tx: &Transaction, rune: Rune) -> Result<bool> {

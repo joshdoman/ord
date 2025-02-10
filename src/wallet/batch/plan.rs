@@ -475,6 +475,7 @@ impl Plan {
             .transpose()?,
           turbo: etching.turbo,
           freezer: etching.freezer.map(|freezer| freezer.rune),
+          minter: etching.minter.map(|minter| minter.rune),
         }),
         mint: None,
         pointer: (premine > 0).then_some((reveal_outputs.len() - 1).try_into().unwrap()),

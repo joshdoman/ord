@@ -26,6 +26,7 @@ fn unfreezing_rune_fails_if_not_freezable() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -77,6 +78,7 @@ fn unfreezing_rune_fails_if_freezer_has_not_been_etched() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -151,6 +153,7 @@ fn unfreezing_rune_fails_if_no_freezer_balance() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -178,6 +181,7 @@ fn unfreezing_rune_fails_if_no_freezer_balance() {
         }),
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -229,6 +233,7 @@ fn unfreezing_rune_fails_with_postage_dust() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -251,6 +256,7 @@ fn unfreezing_rune_fails_with_postage_dust() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -302,6 +308,7 @@ fn unfreezing_rune_adds_back_balance() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -324,6 +331,7 @@ fn unfreezing_rune_adds_back_balance() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -452,6 +460,7 @@ fn unfreezing_rune_on_multiple_outpoints_adds_back_multiple_balances() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -474,6 +483,7 @@ fn unfreezing_rune_on_multiple_outpoints_adds_back_multiple_balances() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -635,6 +645,7 @@ fn wallet_can_unfreeze_no_outpoints_to_collect_lost_balance() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -657,6 +668,7 @@ fn wallet_can_unfreeze_no_outpoints_to_collect_lost_balance() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -803,6 +815,7 @@ fn unfreeze_dry_run() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -825,6 +838,7 @@ fn unfreeze_dry_run() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

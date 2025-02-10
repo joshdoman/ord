@@ -23,6 +23,7 @@ pub struct RuneInfo {
   pub timestamp: DateTime<Utc>,
   pub turbo: bool,
   pub freezer: Option<Rune>,
+  pub minter: Option<Rune>,
   pub tx: u32,
 }
 
@@ -58,6 +59,8 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
             timestamp,
             turbo,
             freezer,
+            minter,
+            ..
           },
         )| {
           (
@@ -79,6 +82,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
               timestamp: crate::timestamp(timestamp),
               turbo,
               freezer,
+              minter,
               tx: id.tx,
             },
           )
