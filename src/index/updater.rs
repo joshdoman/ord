@@ -350,7 +350,11 @@ impl Updater<'_> {
     }
 
     if self.index.index_runes && self.height >= self.index.settings.first_rune_height() {
+      let mut rune_to_freezable_rune_id = wtx.open_multimap_table(RUNE_TO_FREEZABLE_RUNE_ID)?;
+      let mut outpoint_id_to_outpoint = wtx.open_table(OUTPOINT_ID_TO_OUTPOINT)?;
+      let mut outpoint_to_outpoint_id = wtx.open_table(OUTPOINT_TO_OUTPOINT_ID)?;
       let mut outpoint_to_rune_balances = wtx.open_table(OUTPOINT_TO_RUNE_BALANCES)?;
+      let mut outpoint_to_frozen_rune_id = wtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
       let mut rune_id_to_rune_entry = wtx.open_table(RUNE_ID_TO_RUNE_ENTRY)?;
       let mut rune_to_rune_id = wtx.open_table(RUNE_TO_RUNE_ID)?;
       let mut sequence_number_to_rune_id = wtx.open_table(SEQUENCE_NUMBER_TO_RUNE_ID)?;
@@ -365,6 +369,7 @@ impl Updater<'_> {
         event_sender: self.index.event_sender.as_ref(),
         block_time: block.header.time,
         burned: HashMap::new(),
+        lost: HashMap::new(),
         client: &self.index.client,
         height: self.height,
         id_to_entry: &mut rune_id_to_rune_entry,
@@ -373,7 +378,11 @@ impl Updater<'_> {
           self.index.settings.chain().network(),
           Height(self.height),
         ),
+        rune_to_freezable_rune_id: &mut rune_to_freezable_rune_id,
+        outpoint_id_to_outpoint: &mut outpoint_id_to_outpoint,
+        outpoint_to_outpoint_id: &mut outpoint_to_outpoint_id,
         outpoint_to_balances: &mut outpoint_to_rune_balances,
+        outpoint_to_frozen_rune_id: &mut outpoint_to_frozen_rune_id,
         rune_to_id: &mut rune_to_rune_id,
         runes,
         sequence_number_to_rune_id: &mut sequence_number_to_rune_id,

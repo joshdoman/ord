@@ -10,6 +10,8 @@ pub struct Runestone {
   pub etching: Option<Etching>,
   pub mint: Option<RuneId>,
   pub pointer: Option<u32>,
+  pub freeze: Option<FreezeEdict>,
+  pub unfreeze: Option<FreezeEdict>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -84,11 +86,60 @@ impl Runestone {
         ),
       }),
       turbo: Flag::Turbo.take(&mut flags),
+      freezer: Tag::Freezer.take(&mut fields, |[freezer]| Some(Rune(freezer))),
     });
 
     let mint = Tag::Mint.take(&mut fields, |[block, tx]| {
       RuneId::new(block.try_into().ok()?, tx.try_into().ok()?)
     });
+
+    let freeze = if let Some(block) = Tag::Freeze.take(&mut fields, |[block]| Some(block)) {
+      let rune_id = if block > 0 {
+        let tx = Tag::Freeze.take(&mut fields, |[tx]| Some(tx))?;
+        RuneId::new(block.try_into().ok()?, tx.try_into().ok()?)
+      } else {
+        None
+      };
+
+      let mut outpoints = Vec::new();
+      while let Some(outpoint) = Tag::Freeze.take(&mut fields, |[block, tx, output]| {
+        Some(OutPointId {
+          block: block.try_into().ok()?,
+          tx: tx.try_into().ok()?,
+          output: output.try_into().ok()?,
+        })
+      }) {
+        outpoints.push(outpoint);
+      }
+
+      Some(FreezeEdict { rune_id, outpoints })
+    } else {
+      None
+    };
+
+    let unfreeze = if let Some(block) = Tag::Unfreeze.take(&mut fields, |[block]| Some(block)) {
+      let rune_id = if block > 0 {
+        let tx = Tag::Unfreeze.take(&mut fields, |[tx]| Some(tx))?;
+        RuneId::new(block.try_into().ok()?, tx.try_into().ok()?)
+      } else {
+        None
+      };
+
+      let mut outpoints = Vec::new();
+      while let Some(outpoint) = Tag::Unfreeze.take(&mut fields, |[block, tx, output]| {
+        Some(OutPointId {
+          block: block.try_into().ok()?,
+          tx: tx.try_into().ok()?,
+          output: output.try_into().ok()?,
+        })
+      }) {
+        outpoints.push(outpoint);
+      }
+
+      Some(FreezeEdict { rune_id, outpoints })
+    } else {
+      None
+    };
 
     let pointer = Tag::Pointer.take(&mut fields, |[pointer]| {
       let pointer = u32::try_from(pointer).ok()?;
@@ -123,6 +174,8 @@ impl Runestone {
       etching,
       mint,
       pointer,
+      freeze,
+      unfreeze,
     }))
   }
 
@@ -157,10 +210,36 @@ impl Runestone {
         Tag::OffsetStart.encode_option(terms.offset.0, &mut payload);
         Tag::OffsetEnd.encode_option(terms.offset.1, &mut payload);
       }
+
+      Tag::Freezer.encode_option(etching.freezer.map(|rune| rune.0), &mut payload);
     }
 
     if let Some(RuneId { block, tx }) = self.mint {
       Tag::Mint.encode([block.into(), tx.into()], &mut payload);
+    }
+
+    if let Some(FreezeEdict { rune_id, outpoints }) = self.freeze.clone() {
+      if let Some(RuneId { block, tx }) = rune_id {
+        Tag::Freeze.encode([block.into(), tx.into()], &mut payload);
+      } else {
+        Tag::Freeze.encode([0], &mut payload);
+      }
+
+      for OutPointId { block, tx, output } in outpoints {
+        Tag::Freeze.encode([block.into(), tx.into(), output.into()], &mut payload);
+      }
+    }
+
+    if let Some(FreezeEdict { rune_id, outpoints }) = self.unfreeze.clone() {
+      if let Some(RuneId { block, tx }) = rune_id {
+        Tag::Unfreeze.encode([block.into(), tx.into()], &mut payload);
+      } else {
+        Tag::Unfreeze.encode([0], &mut payload);
+      }
+
+      for OutPointId { block, tx, output } in outpoints {
+        Tag::Unfreeze.encode([block.into(), tx.into(), output.into()], &mut payload);
+      }
     }
 
     Tag::Pointer.encode_option(self.pointer, &mut payload);
@@ -1099,6 +1178,8 @@ mod tests {
         9,
         Tag::Pointer.into(),
         0,
+        Tag::Freezer.into(),
+        5,
         Tag::Mint.into(),
         1,
         Tag::Mint.into(),
@@ -1128,9 +1209,178 @@ mod tests {
             height: (None, None),
           }),
           turbo: true,
+          freezer: Some(Rune(5)),
         }),
         pointer: Some(0),
         mint: Some(RuneId::new(1, 1).unwrap()),
+        freeze: None,
+        unfreeze: None,
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_freeze_tag_with_no_rune_id() {
+    assert_eq!(
+      decipher(&[
+        Tag::Freeze.into(),
+        0,
+        Tag::Freeze.into(),
+        1,
+        Tag::Freeze.into(),
+        2,
+        Tag::Freeze.into(),
+        3,
+      ]),
+      Artifact::Runestone(Runestone {
+        freeze: Some(FreezeEdict {
+          rune_id: None,
+          outpoints: [OutPointId::new(1, 2, 3).unwrap()].to_vec(),
+        }),
+        ..default()
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_freeze_tag_with_rune_id() {
+    assert_eq!(
+      decipher(&[
+        Tag::Freeze.into(),
+        1,
+        Tag::Freeze.into(),
+        2,
+        Tag::Freeze.into(),
+        3,
+        Tag::Freeze.into(),
+        4,
+        Tag::Freeze.into(),
+        5,
+      ]),
+      Artifact::Runestone(Runestone {
+        freeze: Some(FreezeEdict {
+          rune_id: Some(RuneId::new(1, 2).unwrap()),
+          outpoints: [OutPointId::new(3, 4, 5).unwrap()].to_vec(),
+        }),
+        ..default()
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_freeze_tag_with_multiple_outpoints() {
+    assert_eq!(
+      decipher(&[
+        Tag::Freeze.into(),
+        1,
+        Tag::Freeze.into(),
+        2,
+        Tag::Freeze.into(),
+        3,
+        Tag::Freeze.into(),
+        4,
+        Tag::Freeze.into(),
+        5,
+        Tag::Freeze.into(),
+        6,
+        Tag::Freeze.into(),
+        7,
+        Tag::Freeze.into(),
+        8,
+      ]),
+      Artifact::Runestone(Runestone {
+        freeze: Some(FreezeEdict {
+          rune_id: Some(RuneId::new(1, 2).unwrap()),
+          outpoints: [
+            OutPointId::new(3, 4, 5).unwrap(),
+            OutPointId::new(6, 7, 8).unwrap(),
+          ]
+          .to_vec(),
+        }),
+        ..default()
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_unfreeze_tag_with_no_rune_id() {
+    assert_eq!(
+      decipher(&[
+        Tag::Unfreeze.into(),
+        0,
+        Tag::Unfreeze.into(),
+        1,
+        Tag::Unfreeze.into(),
+        2,
+        Tag::Unfreeze.into(),
+        3,
+      ]),
+      Artifact::Runestone(Runestone {
+        unfreeze: Some(FreezeEdict {
+          rune_id: None,
+          outpoints: [OutPointId::new(1, 2, 3).unwrap()].to_vec(),
+        }),
+        ..default()
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_unfreeze_tag_with_rune_id() {
+    assert_eq!(
+      decipher(&[
+        Tag::Unfreeze.into(),
+        1,
+        Tag::Unfreeze.into(),
+        2,
+        Tag::Unfreeze.into(),
+        3,
+        Tag::Unfreeze.into(),
+        4,
+        Tag::Unfreeze.into(),
+        5,
+      ]),
+      Artifact::Runestone(Runestone {
+        unfreeze: Some(FreezeEdict {
+          rune_id: Some(RuneId::new(1, 2).unwrap()),
+          outpoints: [OutPointId::new(3, 4, 5).unwrap()].to_vec(),
+        }),
+        ..default()
+      }),
+    );
+  }
+
+  #[test]
+  fn decipher_unfreeze_tag_with_multiple_outpoints() {
+    assert_eq!(
+      decipher(&[
+        Tag::Unfreeze.into(),
+        1,
+        Tag::Unfreeze.into(),
+        2,
+        Tag::Unfreeze.into(),
+        3,
+        Tag::Unfreeze.into(),
+        4,
+        Tag::Unfreeze.into(),
+        5,
+        Tag::Unfreeze.into(),
+        6,
+        Tag::Unfreeze.into(),
+        7,
+        Tag::Unfreeze.into(),
+        8,
+      ]),
+      Artifact::Runestone(Runestone {
+        unfreeze: Some(FreezeEdict {
+          rune_id: Some(RuneId::new(1, 2).unwrap()),
+          outpoints: [
+            OutPointId::new(3, 4, 5).unwrap(),
+            OutPointId::new(6, 7, 8).unwrap(),
+          ]
+          .to_vec(),
+        }),
+        ..default()
       }),
     );
   }
@@ -1441,12 +1691,28 @@ mod tests {
           height: (Some(u32::MAX.into()), Some(u32::MAX.into())),
         }),
         turbo: true,
+        freezer: Some(Rune(u128::MAX)),
         premine: Some(u64::MAX.into()),
         rune: Some(Rune(u128::MAX)),
         symbol: Some('\u{10FFFF}'),
         spacers: Some(Etching::MAX_SPACERS),
       }),
-      89,
+      109,
+    );
+
+    case(
+      Vec::new(),
+      Some(Etching {
+        divisibility: Some(Etching::MAX_DIVISIBILITY),
+        terms: None,
+        turbo: true,
+        freezer: Some(Rune(u128::MAX)),
+        premine: Some(u128::MAX),
+        rune: Some(Rune(u128::MAX)),
+        symbol: Some('\u{10FFFF}'),
+        spacers: Some(Etching::MAX_SPACERS),
+      }),
+      76,
     );
 
     case(
@@ -1713,9 +1979,18 @@ mod tests {
             offset: (Some(15), Some(16)),
           }),
           turbo: true,
+          freezer: Some(Rune(10)),
         }),
         mint: Some(RuneId::new(17, 18).unwrap()),
         pointer: Some(0),
+        freeze: Some(FreezeEdict {
+          rune_id: RuneId::new(19, 20),
+          outpoints: [OutPointId::new(21, 22, 23).unwrap()].to_vec(),
+        }),
+        unfreeze: Some(FreezeEdict {
+          rune_id: RuneId::new(24, 25),
+          outpoints: [OutPointId::new(26, 27, 28).unwrap()].to_vec(),
+        }),
       },
       &[
         Tag::Flags.into(),
@@ -1742,10 +2017,32 @@ mod tests {
         15,
         Tag::OffsetEnd.into(),
         16,
+        Tag::Freezer.into(),
+        10,
         Tag::Mint.into(),
         17,
         Tag::Mint.into(),
         18,
+        Tag::Freeze.into(),
+        19,
+        Tag::Freeze.into(),
+        20,
+        Tag::Freeze.into(),
+        21,
+        Tag::Freeze.into(),
+        22,
+        Tag::Freeze.into(),
+        23,
+        Tag::Unfreeze.into(),
+        24,
+        Tag::Unfreeze.into(),
+        25,
+        Tag::Unfreeze.into(),
+        26,
+        Tag::Unfreeze.into(),
+        27,
+        Tag::Unfreeze.into(),
+        28,
         Tag::Pointer.into(),
         0,
         Tag::Body.into(),
@@ -1770,6 +2067,7 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
+          freezer: None,
         }),
         ..default()
       },
@@ -1786,10 +2084,99 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
+          freezer: None,
         }),
         ..default()
       },
       &[Tag::Flags.into(), Flag::Etching.mask()],
+    );
+
+    case(
+      Runestone {
+        freeze: Some(FreezeEdict {
+          rune_id: None,
+          outpoints: [OutPointId::new(1, 2, 3).unwrap()].to_vec(),
+        }),
+        unfreeze: Some(FreezeEdict {
+          rune_id: None,
+          outpoints: [OutPointId::new(4, 5, 6).unwrap()].to_vec(),
+        }),
+        ..default()
+      },
+      &[
+        Tag::Freeze.into(),
+        0,
+        Tag::Freeze.into(),
+        1,
+        Tag::Freeze.into(),
+        2,
+        Tag::Freeze.into(),
+        3,
+        Tag::Unfreeze.into(),
+        0,
+        Tag::Unfreeze.into(),
+        4,
+        Tag::Unfreeze.into(),
+        5,
+        Tag::Unfreeze.into(),
+        6,
+      ],
+    );
+
+    case(
+      Runestone {
+        freeze: Some(FreezeEdict {
+          rune_id: RuneId::new(1, 2),
+          outpoints: [
+            OutPointId::new(3, 4, 5).unwrap(),
+            OutPointId::new(6, 7, 8).unwrap(),
+          ]
+          .to_vec(),
+        }),
+        unfreeze: Some(FreezeEdict {
+          rune_id: RuneId::new(9, 10),
+          outpoints: [
+            OutPointId::new(11, 12, 13).unwrap(),
+            OutPointId::new(14, 15, 16).unwrap(),
+          ]
+          .to_vec(),
+        }),
+        ..default()
+      },
+      &[
+        Tag::Freeze.into(),
+        1,
+        Tag::Freeze.into(),
+        2,
+        Tag::Freeze.into(),
+        3,
+        Tag::Freeze.into(),
+        4,
+        Tag::Freeze.into(),
+        5,
+        Tag::Freeze.into(),
+        6,
+        Tag::Freeze.into(),
+        7,
+        Tag::Freeze.into(),
+        8,
+        Tag::Unfreeze.into(),
+        9,
+        Tag::Unfreeze.into(),
+        10,
+        Tag::Unfreeze.into(),
+        11,
+        Tag::Unfreeze.into(),
+        12,
+        Tag::Unfreeze.into(),
+        13,
+        Tag::Unfreeze.into(),
+        14,
+        Tag::Unfreeze.into(),
+        15,
+        Tag::Unfreeze.into(),
+        16,
+      ],
     );
   }
 

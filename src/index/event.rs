@@ -28,6 +28,19 @@ pub enum Event {
     rune_id: RuneId,
     txid: Txid,
   },
+  RuneFreezed {
+    block_height: u32,
+    outpoint: OutPoint,
+    rune_id: RuneId,
+    txid: Txid,
+  },
+  RuneLost {
+    amount: u128,
+    block_height: u32,
+    outpoint: OutPoint,
+    rune_id: RuneId,
+    txid: Txid,
+  },
   RuneMinted {
     amount: u128,
     block_height: u32,
@@ -36,6 +49,12 @@ pub enum Event {
   },
   RuneTransferred {
     amount: u128,
+    block_height: u32,
+    outpoint: OutPoint,
+    rune_id: RuneId,
+    txid: Txid,
+  },
+  RuneUnfreezed {
     block_height: u32,
     outpoint: OutPoint,
     rune_id: RuneId,

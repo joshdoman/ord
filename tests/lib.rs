@@ -61,6 +61,7 @@ mod balances;
 mod decode;
 mod epochs;
 mod find;
+mod frozen;
 mod index;
 mod info;
 mod json_api;
@@ -82,6 +83,7 @@ type Balance = ord::subcommand::wallet::balance::Output;
 type Balances = ord::subcommand::balances::Output;
 type Batch = ord::wallet::batch::Output;
 type Create = ord::subcommand::wallet::create::Output;
+type Frozen = ord::subcommand::frozen::Output;
 type Inscriptions = Vec<ord::subcommand::wallet::inscriptions::Output>;
 type Send = ord::subcommand::wallet::send::Output;
 type Split = ord::subcommand::wallet::split::Output;
@@ -189,6 +191,7 @@ fn etch(core: &mockcore::Handle, ord: &TestServer, rune: Rune) -> Etched {
         rune: SpacedRune { rune, spacers: 0 },
         symbol: '¢',
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -249,6 +252,7 @@ fn batch(core: &mockcore::Handle, ord: &TestServer, batchfile: batch::File) -> E
     symbol,
     terms,
     turbo,
+    freezer,
   } = batchfile.etching.unwrap();
 
   {
@@ -358,7 +362,7 @@ fn batch(core: &mockcore::Handle, ord: &TestServer, batchfile: batch::File) -> E
   <dt>etching transaction</dt>
   <dd>{tx}</dd>
   <dt>mint</dt>
-  {}
+  {0}
   <dt>supply</dt>
   <dd>{premine} {symbol}</dd>
   <dt>premine</dt>
@@ -367,18 +371,25 @@ fn batch(core: &mockcore::Handle, ord: &TestServer, batchfile: batch::File) -> E
   <dd>.*</dd>
   <dt>burned</dt>
   <dd>0 {symbol}</dd>
+  <dt>lost</dt>
+  <dd>0 {symbol}</dd>
   <dt>divisibility</dt>
   <dd>{divisibility}</dd>
   <dt>symbol</dt>
   <dd>{symbol}</dd>
   <dt>turbo</dt>
   <dd>{turbo}</dd>
+  <dt>freezer</dt>
+  <dd>{1}</dd>
   <dt>etching</dt>
   <dd><a class=collapse href=/tx/{reveal}>{reveal}</a></dd>
   <dt>parent</dt>
   <dd><a class=collapse href=/inscription/{parent}>{parent}</a></dd>
 .*",
       mint_definition.join("\\s+"),
+      freezer
+        .map(|r| r.to_string())
+        .unwrap_or_else(|| "none".to_string()),
     ),
   );
 
