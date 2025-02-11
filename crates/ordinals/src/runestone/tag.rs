@@ -20,6 +20,7 @@ pub(super) enum Tag {
   Divisibility = 1,
   Spacers = 3,
   Symbol = 5,
+  Inscription = 7,
   #[allow(unused)]
   Nop = 127,
 }

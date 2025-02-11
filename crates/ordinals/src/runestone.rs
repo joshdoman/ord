@@ -52,6 +52,9 @@ impl Runestone {
       .unwrap_or_default();
 
     let etching = Flag::Etching.take(&mut flags).then(|| Etching {
+      inscription: Tag::Inscription.take(&mut fields, |[sequence_number]| {
+        u64::try_from(sequence_number).ok()
+      }),
       divisibility: Tag::Divisibility.take(&mut fields, |[divisibility]| {
         let divisibility = u8::try_from(divisibility).ok()?;
         (divisibility <= Etching::MAX_DIVISIBILITY).then_some(divisibility)
@@ -144,6 +147,7 @@ impl Runestone {
       Tag::Flags.encode([flags], &mut payload);
 
       Tag::Rune.encode_option(etching.rune.map(|rune| rune.0), &mut payload);
+      Tag::Inscription.encode_option(etching.inscription, &mut payload);
       Tag::Divisibility.encode_option(etching.divisibility, &mut payload);
       Tag::Spacers.encode_option(etching.spacers, &mut payload);
       Tag::Symbol.encode_option(etching.symbol, &mut payload);
@@ -1083,6 +1087,8 @@ mod tests {
         Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask(),
         Tag::Rune.into(),
         4,
+        Tag::Inscription.into(),
+        10,
         Tag::Divisibility.into(),
         1,
         Tag::Spacers.into(),
@@ -1116,6 +1122,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
+          inscription: Some(10),
           divisibility: Some(1),
           premine: Some(8),
           rune: Some(Rune(4)),
@@ -1433,6 +1440,7 @@ mod tests {
     case(
       Vec::new(),
       Some(Etching {
+        inscription: Some(u64::MAX),
         divisibility: Some(Etching::MAX_DIVISIBILITY),
         terms: Some(Terms {
           cap: Some(u32::MAX.into()),
@@ -1446,7 +1454,7 @@ mod tests {
         symbol: Some('\u{10FFFF}'),
         spacers: Some(Etching::MAX_SPACERS),
       }),
-      89,
+      100,
     );
 
     case(
@@ -1701,6 +1709,7 @@ mod tests {
           },
         ],
         etching: Some(Etching {
+          inscription: Some(20),
           divisibility: Some(7),
           premine: Some(8),
           rune: Some(Rune(9)),
@@ -1722,6 +1731,8 @@ mod tests {
         Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask(),
         Tag::Rune.into(),
         9,
+        Tag::Inscription.into(),
+        20,
         Tag::Divisibility.into(),
         7,
         Tag::Spacers.into(),
@@ -1763,6 +1774,7 @@ mod tests {
     case(
       Runestone {
         etching: Some(Etching {
+          inscription: None,
           divisibility: None,
           premine: None,
           rune: Some(Rune(3)),
@@ -1779,6 +1791,7 @@ mod tests {
     case(
       Runestone {
         etching: Some(Etching {
+          inscription: None,
           divisibility: None,
           premine: None,
           rune: None,
