@@ -253,6 +253,19 @@ impl Create {
       bail!("inscription {} does not exist", inscription_id);
     };
 
+    let outpoint = inscription.satpoint.outpoint;
+
+    let Some(inscriptions) = wallet.get_inscriptions_in_output(&outpoint)? else {
+      bail! {
+        "index must have inscription index to accept PSBT",
+      }
+    };
+
+    ensure! {
+      inscriptions.len() <= 1,
+      "inscription `{}` held in utxo with {} other inscription(s)", inscription_id, inscriptions.len() - 1,
+    }
+
     let Some(postage) = inscription.value else {
       bail!("inscription {} unbound", inscription_id);
     };
@@ -261,7 +274,7 @@ impl Create {
       version: Version(2),
       lock_time: LockTime::ZERO,
       input: vec![TxIn {
-        previous_output: inscription.satpoint.outpoint,
+        previous_output: outpoint,
         script_sig: ScriptBuf::new(),
         sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
         witness: Witness::new(),
