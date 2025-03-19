@@ -55,7 +55,9 @@ impl Accept {
       Outgoing::Rune { decimal, rune } => {
         self.accept_rune_sell_offer(wallet, psbt, decimal, rune)?
       }
-      Outgoing::InscriptionId(_) => bail!("inscription sell offers not yet implemented"),
+      Outgoing::InscriptionId(inscription) => {
+        self.accept_inscription_sell_offer(wallet, psbt, inscription)?
+      }
       _ => bail!("outgoing must be either <INSCRIPTION> or <DECIMAL:RUNE>"),
     };
 
@@ -123,7 +125,82 @@ impl Accept {
 
     let postage = self.postage.unwrap_or(TARGET_POSTAGE);
 
-    let receive_output = TxOut {
+    self.fund_and_broadcast_accept_tx(
+      wallet,
+      psbt,
+      input_sat_value,
+      output_sat_value,
+      postage,
+      false,
+    )
+  }
+
+  fn accept_inscription_sell_offer(
+    &self,
+    wallet: Wallet,
+    psbt: Psbt,
+    inscription_id: InscriptionId,
+  ) -> Result<(Txid, String, Amount)> {
+    ensure! {
+      !wallet.inscription_info().contains_key(&inscription_id),
+      "inscription {} already in wallet",
+      inscription_id
+    };
+
+    let Some(inscription) = wallet.get_inscription(inscription_id)? else {
+      bail!("inscription {} does not exist", inscription_id);
+    };
+
+    ensure! {
+      psbt.unsigned_tx.input.len() == 1,
+      "inscription sell offer may only have 1 input in PSBT"
+    }
+
+    ensure! {
+      psbt.unsigned_tx.output.len() == 1,
+      "inscription sell offer may only have 1 input in PSBT"
+    }
+
+    let Some(seller_postage) = inscription.value else {
+      bail!("inscription {} unbound", inscription_id);
+    };
+
+    let input_sat_value = Amount::from_sat(seller_postage);
+    let output_sat_value = psbt.unsigned_tx.output[0].value;
+
+    ensure! {
+      input_sat_value + self.amount >= output_sat_value,
+      "PSBT requires more sats than user allows ({} > {})",
+      output_sat_value - input_sat_value,
+      self.amount,
+    }
+
+    let mut buyer_postage = self.postage.unwrap_or(TARGET_POSTAGE);
+
+    if input_sat_value > buyer_postage {
+      buyer_postage = input_sat_value;
+    }
+
+    self.fund_and_broadcast_accept_tx(
+      wallet,
+      psbt,
+      input_sat_value,
+      output_sat_value,
+      buyer_postage,
+      true,
+    )
+  }
+
+  fn fund_and_broadcast_accept_tx(
+    &self,
+    wallet: Wallet,
+    psbt: Psbt,
+    input_sat_value: Amount,
+    output_sat_value: Amount,
+    postage: Amount,
+    is_sat_based_offer: bool,
+  ) -> Result<(Txid, String, Amount)> {
+    let mut receive_output = TxOut {
       value: postage,
       script_pubkey: wallet.get_change_address()?.into(),
     };
@@ -162,6 +239,20 @@ impl Accept {
     };
 
     let mut next_utxo = 0;
+
+    if is_sat_based_offer {
+      // insert the smallest utxo as the first input and add value to receive output
+      if let Some((smallest_input, txout)) = unlocked_sorted_utxos.pop() {
+        inputs.push(TxIn {
+          previous_output: smallest_input,
+          script_sig: ScriptBuf::new(),
+          sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
+          witness: Witness::new(),
+        });
+
+        receive_output.value += txout.value;
+      }
+    }
 
     // insert inputs until funding amount is satisfied
     for (outpoint, txout) in &unlocked_sorted_utxos {

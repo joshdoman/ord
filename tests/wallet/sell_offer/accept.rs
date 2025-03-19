@@ -4,7 +4,7 @@ type Accept = ord::subcommand::wallet::sell_offer::accept::Output;
 type Create = ord::subcommand::wallet::sell_offer::create::Output;
 
 #[test]
-fn accepted_offer_works() {
+fn accepted_rune_offer_works() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
   let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
@@ -196,7 +196,105 @@ fn accepted_offer_works() {
 }
 
 #[test]
-fn accept_dry_run() {
+fn accepted_inscription_offer_works() {
+  let core = mockcore::spawn();
+
+  let ord = TestServer::spawn_with_server_args(&core, &[], &[]);
+
+  create_wallet(&core, &ord);
+
+  let seller_postage = 9000;
+  let (inscription, txid) = inscribe_with_options(&core, &ord, Some(seller_postage), 0);
+
+  core.mine_blocks(1);
+
+  let create = CommandBuilder::new(format!(
+    "wallet sell-offer create --outgoing {inscription} --amount 1btc",
+  ))
+  .core(&core)
+  .ord(&ord)
+  .run_and_deserialize_output::<Create>();
+
+  assert_eq!(create.outgoing, Outgoing::InscriptionId(inscription));
+
+  assert_eq!(create.amount, Amount::from_sat(100_000_000));
+
+  let inscription_address = Address::from_script(
+    &core.tx_by_id(txid).output[0].script_pubkey,
+    Network::Bitcoin,
+  )
+  .unwrap();
+
+  core
+    .state()
+    .remove_wallet_address(inscription_address.clone());
+
+  let pre_balance = CommandBuilder::new("wallet balance")
+    .core(&core)
+    .ord(&ord)
+    .run_and_deserialize_output::<Balance>();
+
+  let bid = COIN_VALUE;
+  let buyer_postage = 8000;
+
+  let accept = CommandBuilder::new(format!(
+    "wallet sell-offer accept --outgoing {} --amount {}btc --postage {}sat --fee-rate 1 --psbt {}",
+    inscription,
+    bid / COIN_VALUE,
+    buyer_postage,
+    create.psbt
+  ))
+  .core(&core)
+  .ord(&ord)
+  .run_and_deserialize_output::<Accept>();
+
+  core.mine_blocks(1);
+
+  let seller_address = Address::from_script(
+    &core.tx_by_id(accept.txid).output[1].script_pubkey,
+    Network::Bitcoin,
+  )
+  .unwrap();
+
+  core.state().remove_wallet_address(seller_address.clone());
+
+  let balance = CommandBuilder::new("wallet balance")
+    .core(&core)
+    .ord(&ord)
+    .run_and_deserialize_output::<Balance>();
+
+  let psbt = Psbt::deserialize(&base64_decode(&accept.psbt).unwrap()).unwrap();
+
+  // seller_postage exceeds buyer_postage, so ordinal value is seller_postage + first input value
+  let first_input_utxo = psbt.inputs[0].witness_utxo.clone().unwrap();
+  assert_eq!(
+    psbt.unsigned_tx.output[0].value.to_sat(),
+    first_input_utxo.value.to_sat() + seller_postage
+  );
+
+  assert_eq!(balance.ordinal, psbt.unsigned_tx.output[0].value.to_sat());
+  assert_eq!(
+    balance.cardinal,
+    pre_balance.cardinal + 50 * COIN_VALUE - bid - balance.ordinal
+  );
+
+  assert_eq!(
+    Psbt::deserialize(&base64_decode(&accept.psbt).unwrap())
+      .unwrap()
+      .fee()
+      .unwrap()
+      .to_sat(),
+    accept.fee
+  );
+
+  let finalized_psbt = Psbt::deserialize(&base64_decode(&accept.psbt).unwrap()).unwrap();
+
+  assert_eq!(accept.fee, 312);
+  assert_eq!(finalized_psbt.extract_tx().unwrap().vsize(), 312);
+}
+
+#[test]
+fn accept_rune_dry_run() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
   let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
@@ -342,7 +440,7 @@ fn accept_dry_run() {
 }
 
 #[test]
-fn accepted_multi_input_offer_works() {
+fn accepted_multi_input_rune_offer_works() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
   let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);

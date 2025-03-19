@@ -589,24 +589,6 @@ fn error_rune_must_exist() {
 }
 
 #[test]
-fn error_rune_outgoing_must_be_formatted_correctly() {
-  let core = mockcore::builder().network(Network::Regtest).build();
-
-  let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
-
-  create_wallet(&core, &ord);
-
-  CommandBuilder::new(
-    "--regtest wallet sell-offer create --outgoing 6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0 --amount 1btc"
-  )
-  .core(&core)
-  .ord(&ord)
-  .expected_stderr("error: inscription sell offers not yet implemented\n")
-  .expected_exit_code(1)
-  .run_and_extract_stdout();
-}
-
-#[test]
 fn error_no_isolated_rune_balance_in_wallet() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
@@ -834,6 +816,94 @@ fn error_unable_to_create_partial() {
     "error: missing utxo in wallet with balance below `500:{}`\n",
     Rune(RUNE),
   ))
+  .expected_exit_code(1)
+  .run_and_extract_stdout();
+}
+
+#[test]
+fn inscription_sell_offer_is_correct() {
+  let core = mockcore::spawn();
+
+  let ord = TestServer::spawn_with_server_args(&core, &[], &[]);
+
+  create_wallet(&core, &ord);
+
+  let seller_postage = 9000;
+  let (inscription, txid) = inscribe_with_options(&core, &ord, Some(seller_postage), 0);
+
+  core.mine_blocks(1);
+
+  let create = CommandBuilder::new(format!(
+    "wallet sell-offer create --outgoing {inscription} --amount 1btc",
+  ))
+  .core(&core)
+  .ord(&ord)
+  .run_and_deserialize_output::<Create>();
+
+  assert_eq!(create.outgoing, Outgoing::InscriptionId(inscription));
+
+  assert_eq!(create.amount, Amount::from_sat(100_000_000));
+
+  assert!(!create.has_multiple);
+  assert!(!create.is_partial);
+
+  let outputs = CommandBuilder::new("wallet outputs")
+    .core(&core)
+    .ord(&ord)
+    .run_and_deserialize_output::<Vec<ord::subcommand::wallet::outputs::Output>>();
+
+  let psbt = Psbt::deserialize(&base64_decode(&create.psbt).unwrap()).unwrap();
+
+  assert_eq!(psbt.unsigned_tx.input.len(), 1);
+  assert_eq!(psbt.unsigned_tx.output.len(), 1);
+
+  assert!(outputs
+    .iter()
+    .any(|output| output.output == psbt.unsigned_tx.input[0].previous_output));
+
+  assert!(core.state().is_wallet_address(
+    &Address::from_script(&psbt.unsigned_tx.output[0].script_pubkey, Network::Bitcoin).unwrap()
+  ));
+
+  // verify input is signed with SINGLE|ANYONECANPAY
+  assert_eq!(
+    psbt.inputs[0].final_script_witness,
+    Some(Witness::from_slice(&[&[1; 64]]))
+  );
+
+  pretty_assertions::assert_eq!(
+    psbt.unsigned_tx,
+    Transaction {
+      version: Version(2),
+      lock_time: LockTime::ZERO,
+      input: vec![TxIn {
+        previous_output: OutPoint { txid, vout: 0 },
+        script_sig: ScriptBuf::new(),
+        sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
+        witness: Witness::new(),
+      }],
+      output: vec![TxOut {
+        value: Amount::from_sat(100_009_000),
+        script_pubkey: psbt.unsigned_tx.output[0].script_pubkey.clone(),
+      }],
+    }
+  );
+}
+
+#[test]
+fn error_inscription_not_in_wallet() {
+  let core = mockcore::builder().network(Network::Regtest).build();
+
+  let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
+
+  create_wallet(&core, &ord);
+
+  CommandBuilder::new(
+    "--regtest wallet sell-offer create --outgoing 6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0 --amount 1btc"
+  )
+  .core(&core)
+  .ord(&ord)
+  .expected_stderr("error: inscription 6fb976ab49dcec017f1e201e84395983204ae1a7c2abf7ced0a85d692e442799i0 not in wallet\n")
   .expected_exit_code(1)
   .run_and_extract_stdout();
 }
