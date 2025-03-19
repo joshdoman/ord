@@ -969,10 +969,9 @@ impl Api for Server {
     &self,
     psbt: String,
     sign: Option<bool>,
-    sighash_type: Option<()>,
+    sighash_type: Option<String>,
     bip32derivs: Option<bool>,
   ) -> Result<WalletProcessPsbtResult, jsonrpc_core::Error> {
-    assert!(sighash_type.is_none());
     assert!(bip32derivs.is_none());
 
     let mut psbt = Psbt::deserialize(
@@ -997,6 +996,10 @@ impl Api for Server {
     if let Some(sign) = sign {
       if sign {
         for input in psbt.inputs.iter_mut() {
+          if input.final_script_witness.is_some() || input.final_script_sig.is_some() {
+            continue;
+          }
+
           let address = Address::from_script(
             &input.witness_utxo.as_ref().unwrap().script_pubkey,
             self.network,
@@ -1004,15 +1007,25 @@ impl Api for Server {
           .unwrap();
 
           if self.state().is_wallet_address(&address) {
-            input.final_script_witness = Some(Witness::from_slice(&[&[0; 64]]));
+            // indicate SINGLE|ANYONECANPAY with witness of all 1s, otherwise all 0s
+            let witness = match sighash_type.as_deref() {
+              Some("SINGLE|ANYONECANPAY") => Witness::from_slice(&[&[1; 64]]),
+              _ => Witness::from_slice(&[&[0; 64]]),
+            };
+            input.final_script_witness = Some(witness);
           }
         }
       }
     }
 
+    let complete = psbt
+      .inputs
+      .iter()
+      .all(|input| input.final_script_witness.is_some());
+
     Ok(WalletProcessPsbtResult {
       psbt: base64::engine::general_purpose::STANDARD.encode(psbt.serialize()),
-      complete: false,
+      complete,
     })
   }
 
@@ -1066,7 +1079,7 @@ impl Api for Server {
 
         let txout = &tx.output[usize::try_from(input.previous_output.vout).unwrap()];
 
-        let address = Address::from_script(&txout.script_pubkey, Network::Bitcoin).unwrap();
+        let address = Address::from_script(&txout.script_pubkey, self.network).unwrap();
 
         if self.state().is_wallet_address(&address) {
           balance_change -= i64::try_from(txout.value.to_sat()).unwrap();
@@ -1074,7 +1087,7 @@ impl Api for Server {
       }
 
       for output in tx.output {
-        let address = Address::from_script(&output.script_pubkey, Network::Bitcoin).unwrap();
+        let address = Address::from_script(&output.script_pubkey, self.network).unwrap();
         if self.state().is_wallet_address(&address) {
           balance_change += i64::try_from(output.value.to_sat()).unwrap();
         }

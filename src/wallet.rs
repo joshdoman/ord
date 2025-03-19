@@ -198,6 +198,10 @@ impl Wallet {
     self.inscription_info.clone()
   }
 
+  pub(crate) fn output_info(&self) -> BTreeMap<OutPoint, api::Output> {
+    self.output_info.clone()
+  }
+
   pub(crate) fn get_inscription(
     &self,
     inscription_id: InscriptionId,
@@ -214,6 +218,27 @@ impl Wallet {
       .json()?;
 
     Ok(inscription)
+  }
+
+  pub(crate) fn get_any_output_info(&self, output: OutPoint) -> Result<Option<api::Output>> {
+    let output_info = self
+      .ord_client
+      .get(self.rpc_url.join(&format!("/output/{output}")).unwrap())
+      .send()?
+      .json()?;
+
+    Ok(output_info)
+  }
+
+  pub(crate) fn output_exists(&self, output: OutPoint) -> Result<bool> {
+    Ok(
+      !self
+        .ord_client
+        .get(self.rpc_url.join(&format!("/output/{output}")).unwrap())
+        .send()?
+        .status()
+        .is_client_error(),
+    )
   }
 
   pub(crate) fn inscription_exists(&self, inscription_id: InscriptionId) -> Result<bool> {
@@ -302,6 +327,16 @@ impl Wallet {
         .ok_or(anyhow!("output not found in wallet"))?
         .runes
         .clone(),
+    )
+  }
+
+  pub(crate) fn get_value_in_output(&self, output: &OutPoint) -> Result<u64> {
+    Ok(
+      self
+        .output_info
+        .get(output)
+        .ok_or(anyhow!("output not found in wallet"))?
+        .value,
     )
   }
 

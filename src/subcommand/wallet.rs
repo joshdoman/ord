@@ -9,6 +9,7 @@ pub mod addresses;
 pub mod balance;
 mod batch_command;
 pub mod burn;
+pub mod buy_offer;
 pub mod cardinals;
 pub mod create;
 pub mod dump;
@@ -24,6 +25,7 @@ pub mod restore;
 pub mod resume;
 pub mod runics;
 pub mod sats;
+pub mod sell_offer;
 pub mod send;
 mod shared_args;
 pub mod sign;
@@ -56,6 +58,8 @@ pub(crate) enum Subcommand {
   Batch(batch_command::Batch),
   #[command(about = "Burn an inscription")]
   Burn(burn::Burn),
+  #[command(subcommand, about = "Buy offer commands")]
+  BuyOffer(buy_offer::BuyOffer),
   #[command(about = "List unspent cardinal outputs in wallet")]
   Cardinals,
   #[command(about = "Create new wallet")]
@@ -70,8 +74,6 @@ pub(crate) enum Subcommand {
   Label,
   #[command(about = "Mint a rune")]
   Mint(mint::Mint),
-  #[command(subcommand, about = "Offer commands")]
-  Offer(offer::Offer),
   #[command(about = "List all unspent outputs in wallet")]
   Outputs(outputs::Outputs),
   #[command(about = "List pending etchings")]
@@ -86,6 +88,8 @@ pub(crate) enum Subcommand {
   Runics,
   #[command(about = "List wallet satoshis")]
   Sats(sats::Sats),
+  #[command(subcommand, about = "Sell offer commands")]
+  SellOffer(sell_offer::SellOffer),
   #[command(about = "Send sat or inscription")]
   Send(send::Send),
   #[command(about = "Sign message")]
@@ -94,6 +98,17 @@ pub(crate) enum Subcommand {
   Split(split::Split),
   #[command(about = "See wallet transactions")]
   Transactions(transactions::Transactions),
+
+  #[deprecated(
+    since = "0.23.0",
+    note = "This command is deprecated and may be removed in future versions"
+  )]
+  #[command(
+    subcommand,
+    about = "(DEPRECATED) This command is no longer recommended. Use buy-offer instead.",
+    hide = true
+  )]
+  Offer(offer::Offer),
 }
 
 impl WalletCommand {
@@ -123,6 +138,7 @@ impl WalletCommand {
       Subcommand::Balance => balance::run(wallet),
       Subcommand::Batch(batch) => batch.run(wallet),
       Subcommand::Burn(burn) => burn.run(wallet),
+      Subcommand::BuyOffer(buy_offer) => buy_offer.run(wallet),
       Subcommand::Cardinals => cardinals::run(wallet),
       Subcommand::Create(_) | Subcommand::Restore(_) => unreachable!(),
       Subcommand::Dump => dump::run(wallet),
@@ -130,17 +146,20 @@ impl WalletCommand {
       Subcommand::Inscriptions => inscriptions::run(wallet),
       Subcommand::Label => label::run(wallet),
       Subcommand::Mint(mint) => mint.run(wallet),
-      Subcommand::Offer(offer) => offer.run(wallet),
       Subcommand::Outputs(outputs) => outputs.run(wallet),
       Subcommand::Pending(pending) => pending.run(wallet),
       Subcommand::Receive(receive) => receive.run(wallet),
       Subcommand::Resume(resume) => resume.run(wallet),
       Subcommand::Runics => runics::run(wallet),
       Subcommand::Sats(sats) => sats.run(wallet),
+      Subcommand::SellOffer(sell_offer) => sell_offer.run(wallet),
       Subcommand::Send(send) => send.run(wallet),
       Subcommand::Sign(sign) => sign.run(wallet),
       Subcommand::Split(split) => split.run(wallet),
       Subcommand::Transactions(transactions) => transactions.run(wallet),
+
+      #[allow(deprecated)]
+      Subcommand::Offer(offer) => offer.run(wallet),
     }
   }
 
