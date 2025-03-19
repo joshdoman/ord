@@ -29,14 +29,34 @@ pub(crate) struct Create {
 
 impl Create {
   pub(crate) fn run(&self, wallet: Wallet) -> SubcommandResult {
-    let (psbt, outgoing, amount, has_multiple, is_partial) = match self.outgoing {
-      Outgoing::Rune { decimal, rune } => self.create_rune_sell_offer(wallet, decimal, rune)?,
-      Outgoing::InscriptionId(_) => bail!("inscription sell offers not yet implemented"),
+    let (tx, outgoing, amount, has_multiple, is_partial) = match self.outgoing {
+      Outgoing::Rune { decimal, rune } => self.create_rune_sell_offer(&wallet, decimal, rune)?,
+      Outgoing::InscriptionId(inscription) => {
+        self.create_inscription_sell_offer(&wallet, inscription)?
+      }
       _ => bail!("outgoing must be either <INSCRIPTION> or <DECIMAL:RUNE>"),
     };
 
+    let psbt = Psbt::from_unsigned_tx(tx)?;
+
+    let result = wallet
+      .bitcoin_client()
+      .call::<String>("utxoupdatepsbt", &[base64_encode(&psbt.serialize()).into()])?;
+
+    let result = wallet.bitcoin_client().wallet_process_psbt(
+      &result,
+      Some(true),
+      Some(SigHashType::from(SinglePlusAnyoneCanPay)),
+      None,
+    )?;
+
+    ensure! {
+      result.complete,
+      "Failed to sign PSBT after processing with wallet",
+    }
+
     Ok(Some(Box::new(Output {
-      psbt,
+      psbt: result.psbt,
       outgoing,
       amount,
       has_multiple,
@@ -48,10 +68,10 @@ impl Create {
   #[allow(clippy::cast_sign_loss)]
   fn create_rune_sell_offer(
     &self,
-    wallet: Wallet,
+    wallet: &Wallet,
     decimal: Decimal,
     spaced_rune: SpacedRune,
-  ) -> Result<(String, Outgoing, Amount, bool, bool)> {
+  ) -> Result<(Transaction, Outgoing, Amount, bool, bool)> {
     ensure!(
       wallet.has_rune_index(),
       "creating runes offer with `ord offer` requires index created with `--index-runes` flag",
@@ -201,24 +221,6 @@ impl Create {
       output: outputs,
     };
 
-    let psbt = Psbt::from_unsigned_tx(tx)?;
-
-    let result = wallet
-      .bitcoin_client()
-      .call::<String>("utxoupdatepsbt", &[base64_encode(&psbt.serialize()).into()])?;
-
-    let result = wallet.bitcoin_client().wallet_process_psbt(
-      &result,
-      Some(true),
-      Some(SigHashType::from(SinglePlusAnyoneCanPay)),
-      None,
-    )?;
-
-    ensure! {
-      result.complete,
-      "Failed to sign PSBT after processing with wallet",
-    }
-
     let outgoing = Outgoing::Rune {
       decimal: Decimal {
         value: sum,
@@ -228,12 +230,49 @@ impl Create {
     };
 
     Ok((
-      result.psbt,
+      tx,
       outgoing,
       Amount::from_sat(sats_required),
       subset.len() > 1,
       partial,
     ))
+  }
+
+  fn create_inscription_sell_offer(
+    &self,
+    wallet: &Wallet,
+    inscription_id: InscriptionId,
+  ) -> Result<(Transaction, Outgoing, Amount, bool, bool)> {
+    ensure!(
+      wallet.inscription_info().contains_key(&inscription_id),
+      "inscription {} not in wallet",
+      inscription_id
+    );
+
+    let Some(inscription) = wallet.get_inscription(inscription_id)? else {
+      bail!("inscription {} does not exist", inscription_id);
+    };
+
+    let Some(postage) = inscription.value else {
+      bail!("inscription {} unbound", inscription_id);
+    };
+
+    let tx = Transaction {
+      version: Version(2),
+      lock_time: LockTime::ZERO,
+      input: vec![TxIn {
+        previous_output: inscription.satpoint.outpoint,
+        script_sig: ScriptBuf::new(),
+        sequence: Sequence::ENABLE_RBF_NO_LOCKTIME,
+        witness: Witness::new(),
+      }],
+      output: vec![TxOut {
+        value: self.amount + Amount::from_sat(postage),
+        script_pubkey: wallet.get_change_address()?.into(),
+      }],
+    };
+
+    Ok((tx, self.outgoing.clone(), self.amount, false, false))
   }
 }
 
