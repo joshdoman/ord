@@ -200,11 +200,11 @@ impl Accept {
     let mut contains_multiple_runes = false;
     let mut amount = 0;
 
-    for (_, utxo) in &outgoing {
+    for utxo in outgoing.values() {
       let Some(runes) = wallet.get_runes_balances_in_output(utxo)? else {
         bail! {
           "outgoing input {} contains no runes",
-          *utxo
+          utxo
         }
       };
 
@@ -212,7 +212,7 @@ impl Accept {
         ensure! {
           inscriptions.is_empty(),
           "outgoing input {} contains {} inscription(s)",
-          *utxo,
+          utxo,
           inscriptions.len()
         }
       };
@@ -220,7 +220,7 @@ impl Accept {
       let Some(pile) = runes.get(&spaced_rune) else {
         bail!(format!(
           "outgoing input {} does not contain rune {}",
-          *utxo, spaced_rune
+          utxo, spaced_rune
         ));
       };
 
@@ -258,7 +258,7 @@ impl Accept {
       ensure! {
         !unsigned_tx.output.is_empty() &&
         outgoing.values().any(|outgoing| {
-          unsigned_tx.output[0].script_pubkey == wallet.utxos().get(&outgoing).unwrap().script_pubkey
+          unsigned_tx.output[0].script_pubkey == wallet.utxos().get(outgoing).unwrap().script_pubkey
         }),
         "unexpected seller address in PSBT"
       }
