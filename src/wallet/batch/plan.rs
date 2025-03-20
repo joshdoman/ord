@@ -451,6 +451,7 @@ impl Plan {
       let inner = Runestone {
         edicts: Vec::new(),
         etching: Some(ordinals::Etching {
+          inscription: None,
           divisibility: (etching.divisibility > 0).then_some(etching.divisibility),
           premine: (premine > 0).then_some(premine),
           rune: Some(etching.rune.rune),
