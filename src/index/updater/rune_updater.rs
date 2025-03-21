@@ -360,9 +360,11 @@ impl RuneUpdater<'_, '_, '_> {
     self.id_to_entry.insert(id.store(), entry.store())?;
 
     if let Some(freezer) = entry.freezer {
-      self
-        .rune_to_freezable_rune_id
-        .insert(freezer.0, id.store())?;
+      if self.index_freezable_runes {
+        self
+          .rune_to_freezable_rune_id
+          .insert(freezer.0, id.store())?;
+      }
     }
 
     if let Some(sender) = self.event_sender {
