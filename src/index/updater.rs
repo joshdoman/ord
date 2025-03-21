@@ -1,5 +1,8 @@
 use {
-  self::{inscription_updater::InscriptionUpdater, rune_updater::RuneUpdater},
+  self::{
+    freezable_rune_updater::FreezableRuneUpdater, inscription_updater::InscriptionUpdater,
+    rune_updater::RuneUpdater,
+  },
   super::{fetcher::Fetcher, *},
   futures::future::try_join_all,
   tokio::sync::{
@@ -8,6 +11,7 @@ use {
   },
 };
 
+mod freezable_rune_updater;
 mod inscription_updater;
 mod rune_updater;
 
@@ -365,11 +369,17 @@ impl Updater<'_> {
         .map(|x| x.value())
         .unwrap_or(0);
 
+      let freezable_rune_updater = FreezableRuneUpdater {
+        lost: HashMap::new(),
+        event_sender: self.index.event_sender.as_ref(),
+        height: self.height,
+        outpoint_to_frozen_rune_id: &mut outpoint_to_frozen_rune_id,
+      };
+
       let mut rune_updater = RuneUpdater {
         event_sender: self.index.event_sender.as_ref(),
         block_time: block.header.time,
         burned: HashMap::new(),
-        lost: HashMap::new(),
         client: &self.index.client,
         height: self.height,
         id_to_entry: &mut rune_id_to_rune_entry,
@@ -382,12 +392,13 @@ impl Updater<'_> {
         outpoint_id_to_outpoint: &mut outpoint_id_to_outpoint,
         outpoint_to_outpoint_id: &mut outpoint_to_outpoint_id,
         outpoint_to_balances: &mut outpoint_to_rune_balances,
-        outpoint_to_frozen_rune_id: &mut outpoint_to_frozen_rune_id,
         rune_to_id: &mut rune_to_rune_id,
         runes,
         sequence_number_to_rune_id: &mut sequence_number_to_rune_id,
         statistic_to_count: &mut statistic_to_count,
         transaction_id_to_rune: &mut transaction_id_to_rune,
+        freezable_rune_updater,
+        index_freezable_runes: true,
       };
 
       for (i, (tx, txid)) in block.txdata.iter().enumerate() {
