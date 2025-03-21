@@ -53,6 +53,8 @@ etching:
   # setting `turbo` to `true` opts in to these future protocol changes,
   # whatever they may be.
   turbo: true
+  # name of rune that can freeze and unfreeze this rune (optional)
+  freezer: THE•BEST•RUNE•FREEZER
 
 # inscriptions to inscribe
 inscriptions:

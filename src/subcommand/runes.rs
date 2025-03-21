@@ -9,6 +9,7 @@ pub struct Output {
 pub struct RuneInfo {
   pub block: u64,
   pub burned: u128,
+  pub lost: u128,
   pub divisibility: u8,
   pub etching: Txid,
   pub id: RuneId,
@@ -21,6 +22,7 @@ pub struct RuneInfo {
   pub terms: Option<Terms>,
   pub timestamp: DateTime<Utc>,
   pub turbo: bool,
+  pub freezer: Option<Rune>,
   pub tx: u32,
 }
 
@@ -44,6 +46,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
           entry @ RuneEntry {
             block,
             burned,
+            lost,
             divisibility,
             etching,
             mints,
@@ -54,6 +57,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
             terms,
             timestamp,
             turbo,
+            freezer,
           },
         )| {
           (
@@ -61,6 +65,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
             RuneInfo {
               block,
               burned,
+              lost,
               divisibility,
               etching,
               id,
@@ -73,6 +78,7 @@ pub(crate) fn run(settings: Settings) -> SubcommandResult {
               terms,
               timestamp: crate::timestamp(timestamp),
               turbo,
+              freezer,
               tx: id.tx,
             },
           )

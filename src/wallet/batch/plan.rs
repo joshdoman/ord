@@ -474,9 +474,12 @@ impl Plan {
             })
             .transpose()?,
           turbo: etching.turbo,
+          freezer: etching.freezer.map(|freezer| freezer.rune),
         }),
         mint: None,
         pointer: (premine > 0).then_some((reveal_outputs.len() - 1).try_into().unwrap()),
+        freeze: None,
+        unfreeze: None,
       };
 
       let script_pubkey = inner.encipher();

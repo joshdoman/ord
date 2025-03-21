@@ -406,6 +406,7 @@ inscriptions:
             }),
           }),
           turbo: true,
+          freezer: Some("THE•BEST•RUNE•FREEZER".parse().unwrap()),
         }),
         inscriptions: vec![
           batch::Entry {

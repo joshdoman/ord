@@ -413,6 +413,7 @@ fn get_output() {
       ]),
       indexed: true,
       runes: None,
+      frozen_runes: None,
       sat_ranges: Some(vec![
         (5000000000, 10000000000,),
         (10000000000, 15000000000,),
@@ -612,6 +613,7 @@ fn get_runes() {
       entry: RuneEntry {
         block: a.id.block,
         burned: 0,
+        lost: 0,
         terms: None,
         divisibility: 0,
         etching: a.output.reveal,
@@ -625,6 +627,7 @@ fn get_runes() {
         symbol: Some('¢'),
         timestamp: 10,
         turbo: false,
+        freezer: None,
       },
       id: RuneId { block: 10, tx: 1 },
       mintable: false,
@@ -650,6 +653,7 @@ fn get_runes() {
           RuneEntry {
             block: c.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: c.output.reveal,
@@ -663,6 +667,7 @@ fn get_runes() {
             symbol: Some('¢'),
             timestamp: 24,
             turbo: false,
+            freezer: None,
           }
         ),
         (
@@ -670,6 +675,7 @@ fn get_runes() {
           RuneEntry {
             block: b.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: b.output.reveal,
@@ -683,6 +689,7 @@ fn get_runes() {
             symbol: Some('¢'),
             timestamp: 17,
             turbo: false,
+            freezer: None,
           }
         ),
         (
@@ -690,6 +697,7 @@ fn get_runes() {
           RuneEntry {
             block: a.id.block,
             burned: 0,
+            lost: 0,
             terms: None,
             divisibility: 0,
             etching: a.output.reveal,
@@ -703,6 +711,7 @@ fn get_runes() {
             symbol: Some('¢'),
             timestamp: 10,
             turbo: false,
+            freezer: None,
           }
         )
       ],
@@ -816,6 +825,7 @@ fn outputs_address() {
       },
       indexed: true,
       runes: Some(BTreeMap::new()),
+      frozen_runes: Some(BTreeMap::new()),
       sat_ranges: None,
       script_pubkey: ScriptBuf::from(
         address
@@ -860,6 +870,7 @@ fn outputs_address() {
       },
       indexed: true,
       runes: Some(expected_runes),
+      frozen_runes: Some(BTreeMap::new()),
       sat_ranges: None,
       script_pubkey: ScriptBuf::from(
         address
@@ -894,6 +905,7 @@ fn outputs_address() {
       },
       indexed: true,
       runes: Some(BTreeMap::new()),
+      frozen_runes: Some(BTreeMap::new()),
       sat_ranges: None,
       script_pubkey: ScriptBuf::from(
         address

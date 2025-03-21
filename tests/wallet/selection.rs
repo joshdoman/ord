@@ -133,6 +133,7 @@ fn mint_does_not_select_inscription() {
           height: None,
         }),
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -185,6 +186,7 @@ fn sending_rune_does_not_send_inscription() {
       ordinal: 10000,
       runic: Some(0),
       runes: Some(BTreeMap::new()),
+      frozen_runes: Some(BTreeMap::new()),
       total: 20000,
     }
   );
@@ -249,6 +251,7 @@ fn split_does_not_select_inscribed_or_runic_utxos() {
         ]
         .into()
       ),
+      frozen_runes: Some(BTreeMap::new()),
       total: 40000,
     }
   );

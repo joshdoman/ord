@@ -365,6 +365,7 @@ inscriptions:
       ]),
       indexed: true,
       runes: None,
+      frozen_runes: None,
       sat_ranges: Some(vec![(5_000_000_000, 5_000_030_000)]),
       script_pubkey: destination.assume_checked_ref().script_pubkey(),
       spent: false,
@@ -989,6 +990,7 @@ fn sending_rune_creates_change_output_for_non_outgoing_runes() {
       cardinal: 84999960160,
       ordinal: 20000,
       runes: Some([(SpacedRune::new(Rune(RUNE + 1), 0), "1000".parse().unwrap())].into()),
+      frozen_runes: Some(BTreeMap::new()),
       runic: Some(10000),
       total: 84999990160,
     }
@@ -1072,6 +1074,7 @@ fn sending_rune_with_divisibility_works() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -1285,6 +1288,8 @@ fn sending_rune_creates_transaction_with_expected_runestone() {
         output: 2
       }],
       mint: None,
+      freeze: None,
+      unfreeze: None,
     }),
   );
 }
