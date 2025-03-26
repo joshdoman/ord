@@ -86,7 +86,7 @@ impl Runestone {
         ),
       }),
       turbo: Flag::Turbo.take(&mut flags),
-      freezer: Tag::Freezer.take(&mut fields, |[freezer]| Some(Rune(freezer))),
+      admin: Tag::Admin.take(&mut fields, |[admin]| Some(Rune(admin))),
     });
 
     let mint = Tag::Mint.take(&mut fields, |[block, tx]| {
@@ -211,7 +211,7 @@ impl Runestone {
         Tag::OffsetEnd.encode_option(terms.offset.1, &mut payload);
       }
 
-      Tag::Freezer.encode_option(etching.freezer.map(|rune| rune.0), &mut payload);
+      Tag::Admin.encode_option(etching.admin.map(|rune| rune.0), &mut payload);
     }
 
     if let Some(RuneId { block, tx }) = self.mint {
@@ -1178,7 +1178,7 @@ mod tests {
         9,
         Tag::Pointer.into(),
         0,
-        Tag::Freezer.into(),
+        Tag::Admin.into(),
         5,
         Tag::Mint.into(),
         1,
@@ -1209,7 +1209,7 @@ mod tests {
             height: (None, None),
           }),
           turbo: true,
-          freezer: Some(Rune(5)),
+          admin: Some(Rune(5)),
         }),
         pointer: Some(0),
         mint: Some(RuneId::new(1, 1).unwrap()),
@@ -1691,7 +1691,7 @@ mod tests {
           height: (Some(u32::MAX.into()), Some(u32::MAX.into())),
         }),
         turbo: true,
-        freezer: Some(Rune(u128::MAX)),
+        admin: Some(Rune(u128::MAX)),
         premine: Some(u64::MAX.into()),
         rune: Some(Rune(u128::MAX)),
         symbol: Some('\u{10FFFF}'),
@@ -1706,7 +1706,7 @@ mod tests {
         divisibility: Some(Etching::MAX_DIVISIBILITY),
         terms: None,
         turbo: true,
-        freezer: Some(Rune(u128::MAX)),
+        admin: Some(Rune(u128::MAX)),
         premine: Some(u128::MAX),
         rune: Some(Rune(u128::MAX)),
         symbol: Some('\u{10FFFF}'),
@@ -1979,7 +1979,7 @@ mod tests {
             offset: (Some(15), Some(16)),
           }),
           turbo: true,
-          freezer: Some(Rune(10)),
+          admin: Some(Rune(10)),
         }),
         mint: Some(RuneId::new(17, 18).unwrap()),
         pointer: Some(0),
@@ -2017,7 +2017,7 @@ mod tests {
         15,
         Tag::OffsetEnd.into(),
         16,
-        Tag::Freezer.into(),
+        Tag::Admin.into(),
         10,
         Tag::Mint.into(),
         17,
@@ -2067,7 +2067,7 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
-          freezer: None,
+          admin: None,
         }),
         ..default()
       },
@@ -2084,7 +2084,7 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
-          freezer: None,
+          admin: None,
         }),
         ..default()
       },

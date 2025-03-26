@@ -24,7 +24,7 @@ mod tests {
   use {super::*, crate::index::testing::Context};
 
   const RUNE: u128 = 99246114928149462;
-  const FREEZER: u128 = RUNE + 1;
+  const ADMIN: u128 = RUNE + 1;
 
   #[test]
   fn index_starts_with_no_runes() {
@@ -845,7 +845,7 @@ mod tests {
           symbol: Some('$'),
           spacers: Some(1),
           turbo: true,
-          freezer: None,
+          admin: None,
         }),
         pointer: Some(10),
         ..default()
@@ -873,7 +873,7 @@ mod tests {
           symbol: None,
           timestamp: id.block,
           turbo: false,
-          freezer: None,
+          admin: None,
         },
       )],
       [],
@@ -6108,7 +6108,7 @@ mod tests {
             }),
             timestamp: 0,
             turbo: true,
-            freezer: None,
+            admin: None,
           },
         )],
         [],
@@ -6116,7 +6116,7 @@ mod tests {
   }
 
   #[test]
-  fn etching_may_specify_freezer() {
+  fn etching_may_specify_admin() {
     let context = Context::builder().arg("--index-runes").build();
 
     let (txid, id) = context.etch(
@@ -6130,7 +6130,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -6151,7 +6151,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -6169,7 +6169,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -6190,7 +6190,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -6203,10 +6203,10 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -6231,23 +6231,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6265,13 +6265,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -6303,23 +6303,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6329,7 +6329,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -6356,7 +6356,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -6377,7 +6377,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -6399,7 +6399,7 @@ mod tests {
       ],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -6407,7 +6407,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -6432,23 +6432,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6473,13 +6473,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -6514,23 +6514,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6540,7 +6540,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [
         (
@@ -6576,7 +6576,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -6597,7 +6597,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -6610,7 +6610,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -6618,7 +6618,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -6643,23 +6643,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6677,13 +6677,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -6715,23 +6715,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6741,7 +6741,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -6768,7 +6768,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -6789,7 +6789,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -6802,7 +6802,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -6810,7 +6810,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -6835,23 +6835,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6869,13 +6869,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -6907,23 +6907,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -6933,7 +6933,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -6977,23 +6977,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7011,7 +7011,7 @@ mod tests {
             txid: txid3,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
       [],
@@ -7033,7 +7033,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -7054,7 +7054,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -7076,7 +7076,7 @@ mod tests {
       ],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -7084,7 +7084,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -7109,23 +7109,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7150,13 +7150,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -7191,23 +7191,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7217,7 +7217,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [
         (
@@ -7273,23 +7273,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7314,7 +7314,7 @@ mod tests {
             txid: txid3,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
       [],
@@ -7336,7 +7336,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -7357,7 +7357,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -7370,7 +7370,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -7378,7 +7378,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -7403,23 +7403,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7437,13 +7437,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -7475,23 +7475,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7501,7 +7501,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -7545,23 +7545,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7579,7 +7579,7 @@ mod tests {
             txid: txid3,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
       [],
@@ -7601,7 +7601,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -7622,7 +7622,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -7635,7 +7635,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -7643,7 +7643,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -7668,23 +7668,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7702,13 +7702,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -7740,23 +7740,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7766,7 +7766,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -7802,23 +7802,23 @@ mod tests {
             lost: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7828,7 +7828,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [],
     );
@@ -7849,7 +7849,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -7870,7 +7870,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -7883,7 +7883,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -7891,7 +7891,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -7916,23 +7916,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -7950,13 +7950,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -7990,23 +7990,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8016,7 +8016,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -8052,23 +8052,23 @@ mod tests {
             lost: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8078,7 +8078,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [],
     );
@@ -8118,23 +8118,23 @@ mod tests {
             lost: 0,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8144,7 +8144,7 @@ mod tests {
           txid: txid3,
           vout: 0,
         },
-        vec![(id, u128::MAX), (freezer_id, u128::MAX)],
+        vec![(id, u128::MAX), (admin_id, u128::MAX)],
       )],
       [],
     );
@@ -8167,7 +8167,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -8188,7 +8188,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id0.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -8212,7 +8212,7 @@ mod tests {
           rune: Some(Rune(RUNE2)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -8234,7 +8234,7 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id0.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8251,7 +8251,7 @@ mod tests {
             symbol: Some('$'),
             number: 1,
             timestamp: id1.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8274,7 +8274,7 @@ mod tests {
       ],
     );
 
-    let (txid2, freezer_id) = context.etch(
+    let (txid2, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -8282,7 +8282,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -8306,7 +8306,7 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id0.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8323,23 +8323,23 @@ mod tests {
             symbol: Some('$'),
             number: 1,
             timestamp: id1.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid2,
             number: 2,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8364,13 +8364,13 @@ mod tests {
             txid: txid2,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid3 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -8406,7 +8406,7 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id0.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8423,23 +8423,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id1.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid2,
             number: 2,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8449,7 +8449,7 @@ mod tests {
           txid: txid3,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [
         (
@@ -8495,7 +8495,7 @@ mod tests {
             lost: u128::MAX,
             symbol: Some('$'),
             timestamp: id0.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8513,24 +8513,24 @@ mod tests {
             lost: u128::MAX,
             symbol: Some('$'),
             timestamp: id1.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid2,
             number: 2,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             lost: 0,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8540,7 +8540,7 @@ mod tests {
           txid: txid3,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [],
     );
@@ -8578,7 +8578,7 @@ mod tests {
             lost: 0,
             symbol: Some('$'),
             timestamp: id0.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
@@ -8596,24 +8596,24 @@ mod tests {
             lost: 0,
             symbol: Some('$'),
             timestamp: id1.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid2,
             number: 2,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             lost: 0,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8623,7 +8623,7 @@ mod tests {
           txid: txid4,
           vout: 0,
         },
-        vec![(id0, u128::MAX), (id1, u128::MAX), (freezer_id, u128::MAX)],
+        vec![(id0, u128::MAX), (id1, u128::MAX), (admin_id, u128::MAX)],
       )],
       [],
     );
@@ -8644,7 +8644,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -8665,7 +8665,7 @@ mod tests {
           premine: u128::MAX,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -8678,7 +8678,7 @@ mod tests {
       )],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         edicts: vec![Edict {
           id: RuneId::default(),
@@ -8686,7 +8686,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -8711,23 +8711,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8745,13 +8745,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -8785,23 +8785,23 @@ mod tests {
             premine: u128::MAX,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8811,7 +8811,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [(
         OutPoint {
@@ -8863,23 +8863,23 @@ mod tests {
             lost: 0,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -8889,7 +8889,7 @@ mod tests {
           txid: txid3,
           vout: 0,
         },
-        vec![(id, u128::MAX), (freezer_id, u128::MAX)],
+        vec![(id, u128::MAX), (admin_id, u128::MAX)],
       )],
       [],
     );
@@ -8917,7 +8917,7 @@ mod tests {
           rune: Some(Rune(RUNE)),
           symbol: Some('$'),
           premine: Some(1500),
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         }),
         ..default()
@@ -8938,7 +8938,7 @@ mod tests {
           premine: 1500,
           symbol: Some('$'),
           timestamp: id.block,
-          freezer: Some(Rune(FREEZER)),
+          admin: Some(Rune(ADMIN)),
           ..default()
         },
       )],
@@ -8960,10 +8960,10 @@ mod tests {
       ],
     );
 
-    let (txid1, freezer_id) = context.etch(
+    let (txid1, admin_id) = context.etch(
       Runestone {
         etching: Some(Etching {
-          rune: Some(Rune(FREEZER)),
+          rune: Some(Rune(ADMIN)),
           symbol: Some('$'),
           premine: Some(u128::MAX),
           ..default()
@@ -8988,23 +8988,23 @@ mod tests {
             premine: 1500,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -9029,13 +9029,13 @@ mod tests {
             txid: txid1,
             vout: 0,
           },
-          vec![(freezer_id, u128::MAX)],
+          vec![(admin_id, u128::MAX)],
         ),
       ],
     );
 
     let txid2 = context.core.broadcast_tx(TransactionTemplate {
-      inputs: &[(freezer_id.block.try_into().unwrap(), 1, 0, Witness::new())],
+      inputs: &[(admin_id.block.try_into().unwrap(), 1, 0, Witness::new())],
       outputs: 1,
       op_return: Some(
         Runestone {
@@ -9072,23 +9072,23 @@ mod tests {
             premine: 1500,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -9098,7 +9098,7 @@ mod tests {
           txid: txid2,
           vout: 0,
         },
-        vec![(freezer_id, u128::MAX)],
+        vec![(admin_id, u128::MAX)],
       )],
       [
         (
@@ -9165,23 +9165,23 @@ mod tests {
             lost: 500,
             symbol: Some('$'),
             timestamp: id.block,
-            freezer: Some(Rune(FREEZER)),
+            admin: Some(Rune(ADMIN)),
             ..default()
           },
         ),
         (
-          freezer_id,
+          admin_id,
           RuneEntry {
-            block: freezer_id.block,
+            block: admin_id.block,
             etching: txid1,
             number: 1,
             spaced_rune: SpacedRune {
-              rune: Rune(FREEZER),
+              rune: Rune(ADMIN),
               spacers: 0,
             },
             premine: u128::MAX,
             symbol: Some('$'),
-            timestamp: freezer_id.block,
+            timestamp: admin_id.block,
             ..default()
           },
         ),
@@ -9191,7 +9191,7 @@ mod tests {
           txid: txid3,
           vout: 0,
         },
-        vec![(id, 1000), (freezer_id, u128::MAX)],
+        vec![(id, 1000), (admin_id, u128::MAX)],
       )],
       [],
     );

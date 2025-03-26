@@ -321,7 +321,7 @@ impl RuneUpdater<'_, '_, '_> {
         symbol: None,
         timestamp: self.block_time.into(),
         turbo: false,
-        freezer: None,
+        admin: None,
       },
       Artifact::Runestone(Runestone { etching, .. }) => {
         let Etching {
@@ -331,7 +331,7 @@ impl RuneUpdater<'_, '_, '_> {
           spacers,
           symbol,
           turbo,
-          freezer,
+          admin,
           ..
         } = etching.unwrap();
 
@@ -352,18 +352,16 @@ impl RuneUpdater<'_, '_, '_> {
           symbol,
           timestamp: self.block_time.into(),
           turbo,
-          freezer,
+          admin,
         }
       }
     };
 
     self.id_to_entry.insert(id.store(), entry.store())?;
 
-    if let Some(freezer) = entry.freezer {
+    if let Some(admin) = entry.admin {
       if self.index_freezable_runes {
-        self
-          .rune_to_freezable_rune_id
-          .insert(freezer.0, id.store())?;
+        self.rune_to_freezable_rune_id.insert(admin.0, id.store())?;
       }
     }
 

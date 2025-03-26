@@ -54,7 +54,7 @@ pub struct RuneEntry {
   pub terms: Option<Terms>,
   pub timestamp: u64,
   pub turbo: bool,
-  pub freezer: Option<Rune>,
+  pub admin: Option<Rune>,
 }
 
 impl RuneEntry {
@@ -164,7 +164,7 @@ pub(super) type RuneEntryValue = (
   Option<char>,            // symbol
   Option<TermsEntryValue>, // terms
   u64,                     // timestamp
-  (bool, Option<u128>),    // (turbo, freezer)
+  (bool, Option<u128>),    // (turbo, admin)
 );
 
 impl Default for RuneEntry {
@@ -183,7 +183,7 @@ impl Default for RuneEntry {
       terms: None,
       timestamp: 0,
       turbo: false,
-      freezer: None,
+      admin: None,
     }
   }
 }
@@ -204,7 +204,7 @@ impl Entry for RuneEntry {
       symbol,
       terms,
       timestamp,
-      (turbo, freezer),
+      (turbo, admin),
     ): RuneEntryValue,
   ) -> Self {
     Self {
@@ -238,7 +238,7 @@ impl Entry for RuneEntry {
       }),
       timestamp,
       turbo,
-      freezer: freezer.map(Rune),
+      admin: admin.map(Rune),
     }
   }
 
@@ -274,7 +274,7 @@ impl Entry for RuneEntry {
          }| (cap, height, amount, offset),
       ),
       self.timestamp,
-      (self.turbo, self.freezer.map(|freezer| freezer.0)),
+      (self.turbo, self.admin.map(|admin| admin.0)),
     )
   }
 }
@@ -608,7 +608,7 @@ mod tests {
       symbol: Some('a'),
       timestamp: 10,
       turbo: true,
-      freezer: None,
+      admin: None,
     };
 
     let value = (
