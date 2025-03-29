@@ -321,6 +321,7 @@ impl RuneUpdater<'_, '_, '_> {
         symbol: None,
         timestamp: self.block_time.into(),
         turbo: false,
+        freezable: false,
         admin: None,
       },
       Artifact::Runestone(Runestone { etching, .. }) => {
@@ -352,6 +353,7 @@ impl RuneUpdater<'_, '_, '_> {
           symbol,
           timestamp: self.block_time.into(),
           turbo,
+          freezable: false,
           admin,
         }
       }

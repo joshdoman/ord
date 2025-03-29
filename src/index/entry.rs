@@ -54,6 +54,7 @@ pub struct RuneEntry {
   pub terms: Option<Terms>,
   pub timestamp: u64,
   pub turbo: bool,
+  pub freezable: bool,
   pub admin: Option<Rune>,
 }
 
@@ -183,6 +184,7 @@ impl Default for RuneEntry {
       terms: None,
       timestamp: 0,
       turbo: false,
+      freezable: false,
       admin: None,
     }
   }
@@ -238,6 +240,7 @@ impl Entry for RuneEntry {
       }),
       timestamp,
       turbo,
+      freezable: false,
       admin: admin.map(Rune),
     }
   }
