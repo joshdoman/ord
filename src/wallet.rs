@@ -1165,12 +1165,12 @@ impl Wallet {
       bail!("rune {rune} has not been etched");
     };
 
-    let Some(freezer) = rune_entry.freezer else {
+    let Some(admin) = rune_entry.admin else {
       bail!("rune {rune} not freezable");
     };
 
-    let Some((_, freezer_entry, _)) = self.get_rune(freezer)? else {
-      bail!("freezer rune {freezer} has not been etched");
+    let Some((_, admin_entry, _)) = self.get_rune(admin)? else {
+      bail!("admin rune {admin} has not been etched");
     };
 
     let balances = self
@@ -1193,7 +1193,7 @@ impl Wallet {
 
     let mut input = None;
     for (output, runes) in balances {
-      if let Some(balance) = runes.get(&freezer) {
+      if let Some(balance) = runes.get(&admin) {
         if *balance > 0 {
           input = Some(output);
           break;
@@ -1204,7 +1204,7 @@ impl Wallet {
     let Some(input) = input else {
       bail!(
         "insufficient `{}` balance, 0 in wallet",
-        freezer_entry.spaced_rune
+        admin_entry.spaced_rune
       );
     };
 

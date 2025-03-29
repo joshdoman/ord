@@ -53,8 +53,10 @@ etching:
   # setting `turbo` to `true` opts in to these future protocol changes,
   # whatever they may be.
   turbo: true
+  # setting `freezable` to `true` makes this rune freezable by the `admin` rune
+  freezable: true
   # name of rune that can freeze and unfreeze this rune (optional)
-  freezer: THE•BEST•RUNE•FREEZER
+  admin: THE•BEST•RUNE•ADMIN
 
 # inscriptions to inscribe
 inscriptions:

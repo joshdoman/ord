@@ -234,7 +234,7 @@ enum Tag {
   OffsetEnd = 18,
   Mint = 20,
   Pointer = 22,
-  Freezer = 24,
+  Admin = 24,
   Cenotaph = 126,
 
   Divisibility = 1,
@@ -327,10 +327,10 @@ by edicts should be transferred. If the `Pointer` field is absent, unallocated
 runes are transferred to the first non-`OP_RETURN` output. If the pointer is
 greater than the number of outputs, the runestone is a cenotaph.
 
-##### Freezer
+##### Admin
 
-The `Freezer` field contains the name of the rune with the authority to freeze
-this rune. Anyone holding a freezer rune can issue `Freeze` and `Unfreeze` edicts
+The `Admin` field contains the name of the rune with the authority to administrate
+this rune. Anyone holding a admin rune can issue `Freeze` and `Unfreeze` edicts
 for this rune.
 
 ##### Cenotaph
@@ -585,7 +585,7 @@ Freeze and unfreeze edicts are processed after input runes, as well as minted or
 premined runes, are unallocated, but before transfer edicts are processed.
 
 A freeze (or unfreeze) edict may only freeze (or unfreeze) `rune_id` if the
-freezer rune, specified when `rune_id` was etched, is unallocated.
+admin rune, specified when `rune_id` was etched, is unallocated.
 
 If `rune_id` is `None`, a freeze (or unfreeze) edict may freeze (or unfreeze)
 all runes that are freezable by unallocated runes.
@@ -597,5 +597,5 @@ A frozen balance is declared lost if the outpoint is spent while the balance is 
 
 The lost runes of `rune_id` will be collected by the first transaction with an unfreeze 
 edict authorized to unfreeze `rune_id`. Collected runes are added to the transaction's 
-unallocated balance. This provides a way for the freezer to return lost runes that would 
+unallocated balance. This provides a way for the admin to return lost runes that would 
 otherwise be unfrozen.

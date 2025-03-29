@@ -14,7 +14,7 @@ pub(super) enum Tag {
   OffsetEnd = 18,
   Mint = 20,
   Pointer = 22,
-  Freezer = 24,
+  Admin = 24,
   #[allow(unused)]
   Cenotaph = 126,
 

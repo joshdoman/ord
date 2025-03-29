@@ -193,20 +193,20 @@ impl<'a, 'tx> FreezableRuneUpdater<'a, 'tx> {
       };
       let rune_entry = RuneEntry::load(entry.value());
 
-      let Some(freezer) = rune_entry.freezer else {
+      let Some(admin) = rune_entry.admin else {
         return Ok(freezables_balances_by_id);
       };
-      let Some(freezer_rune_id_entry) = tables.rune_to_id.get(&freezer.store())? else {
+      let Some(admin_rune_id_entry) = tables.rune_to_id.get(&admin.store())? else {
         return Ok(freezables_balances_by_id);
       };
-      let freezer_rune_id = RuneId::load(freezer_rune_id_entry.value());
+      let admin_rune_id = RuneId::load(admin_rune_id_entry.value());
 
-      // Get the unallocated balance for the freezer rune
-      let Some(balance) = unallocated.get(&freezer_rune_id) else {
+      // Get the unallocated balance for the admin rune
+      let Some(balance) = unallocated.get(&admin_rune_id) else {
         return Ok(freezables_balances_by_id);
       };
 
-      // Verify that the freezer rune balance is non-zero
+      // Verify that the admin rune balance is non-zero
       if *balance > 0 {
         freezables_balances_by_id.insert(rune_id, Vec::new());
       }

@@ -113,7 +113,8 @@ fn runic_utxos_are_deducted_from_cardinal() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -233,7 +234,8 @@ fn runic_utxos_are_displayed_with_decimal_amount() {
           ..default()
         }),
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

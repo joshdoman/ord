@@ -54,7 +54,8 @@ pub struct RuneEntry {
   pub terms: Option<Terms>,
   pub timestamp: u64,
   pub turbo: bool,
-  pub freezer: Option<Rune>,
+  pub freezable: bool,
+  pub admin: Option<Rune>,
 }
 
 impl RuneEntry {
@@ -153,18 +154,18 @@ type TermsEntryValue = (
 );
 
 pub(super) type RuneEntryValue = (
-  u64,                     // block
-  (u128, u128),            // (burned, lost)
-  u8,                      // divisibility
-  (u128, u128),            // etching
-  u128,                    // mints
-  u64,                     // number
-  u128,                    // premine
-  (u128, u32),             // spaced rune
-  Option<char>,            // symbol
-  Option<TermsEntryValue>, // terms
-  u64,                     // timestamp
-  (bool, Option<u128>),    // (turbo, freezer)
+  u64,                        // block
+  (u128, u128),               // (burned, lost)
+  u8,                         // divisibility
+  (u128, u128),               // etching
+  u128,                       // mints
+  u64,                        // number
+  u128,                       // premine
+  (u128, u32),                // spaced rune
+  Option<char>,               // symbol
+  Option<TermsEntryValue>,    // terms
+  u64,                        // timestamp
+  (bool, bool, Option<u128>), // (turbo, freezable admin)
 );
 
 impl Default for RuneEntry {
@@ -183,7 +184,8 @@ impl Default for RuneEntry {
       terms: None,
       timestamp: 0,
       turbo: false,
-      freezer: None,
+      freezable: false,
+      admin: None,
     }
   }
 }
@@ -204,7 +206,7 @@ impl Entry for RuneEntry {
       symbol,
       terms,
       timestamp,
-      (turbo, freezer),
+      (turbo, freezable, admin),
     ): RuneEntryValue,
   ) -> Self {
     Self {
@@ -238,7 +240,8 @@ impl Entry for RuneEntry {
       }),
       timestamp,
       turbo,
-      freezer: freezer.map(Rune),
+      freezable,
+      admin: admin.map(Rune),
     }
   }
 
@@ -274,7 +277,7 @@ impl Entry for RuneEntry {
          }| (cap, height, amount, offset),
       ),
       self.timestamp,
-      (self.turbo, self.freezer.map(|freezer| freezer.0)),
+      (self.turbo, self.freezable, self.admin.map(|admin| admin.0)),
     )
   }
 }
@@ -608,7 +611,8 @@ mod tests {
       symbol: Some('a'),
       timestamp: 10,
       turbo: true,
-      freezer: None,
+      freezable: false,
+      admin: None,
     };
 
     let value = (
@@ -626,7 +630,7 @@ mod tests {
       Some('a'),
       Some((Some(1), (Some(2), Some(3)), Some(4), (Some(5), Some(6)))),
       10,
-      (true, None),
+      (true, false, None),
     );
 
     assert_eq!(entry.store(), value);

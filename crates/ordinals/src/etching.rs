@@ -9,7 +9,8 @@ pub struct Etching {
   pub symbol: Option<char>,
   pub terms: Option<Terms>,
   pub turbo: bool,
-  pub freezer: Option<Rune>,
+  pub freezable: bool,
+  pub admin: Option<Rune>,
 }
 
 impl Etching {

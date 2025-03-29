@@ -40,7 +40,7 @@ fn with_frozen_runes() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -57,7 +57,8 @@ fn with_frozen_runes() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -73,13 +74,14 @@ fn with_frozen_runes() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "500".parse().unwrap(),
         premine: "500".parse().unwrap(),
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

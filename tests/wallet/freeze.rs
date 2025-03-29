@@ -25,7 +25,8 @@ fn freezing_rune_fails_if_not_freezable() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -47,7 +48,7 @@ fn freezing_rune_fails_if_not_freezable() {
 }
 
 #[test]
-fn freezing_rune_fails_if_freezer_has_not_been_etched() {
+fn freezing_rune_fails_if_admin_has_not_been_etched() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
   let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
@@ -59,7 +60,7 @@ fn freezing_rune_fails_if_freezer_has_not_been_etched() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -76,7 +77,8 @@ fn freezing_rune_fails_if_freezer_has_not_been_etched() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -93,7 +95,7 @@ fn freezing_rune_fails_if_freezer_has_not_been_etched() {
   .core(&core)
   .ord(&ord)
   .expected_exit_code(1)
-  .expected_stderr("error: freezer rune AAAAAAAAAAAAB has not been etched\n")
+  .expected_stderr("error: admin rune AAAAAAAAAAAAB has not been etched\n")
   .run_and_extract_stdout();
 }
 
@@ -119,7 +121,7 @@ fn freezing_rune_with_no_rune_index_fails() {
 }
 
 #[test]
-fn freezing_rune_fails_if_no_freezer_balance() {
+fn freezing_rune_fails_if_no_admin_balance() {
   let core = mockcore::builder().network(Network::Regtest).build();
 
   let ord = TestServer::spawn_with_server_args(&core, &["--index-runes", "--regtest"], &[]);
@@ -131,7 +133,7 @@ fn freezing_rune_fails_if_no_freezer_balance() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -148,7 +150,8 @@ fn freezing_rune_fails_if_no_freezer_balance() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -164,7 +167,7 @@ fn freezing_rune_fails_if_no_freezer_balance() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "1000".parse().unwrap(),
         premine: "0".parse().unwrap(),
         symbol: '¢',
@@ -175,7 +178,8 @@ fn freezing_rune_fails_if_no_freezer_balance() {
           height: None,
         }),
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -209,7 +213,7 @@ fn freezing_rune_fails_with_postage_dust() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -226,7 +230,8 @@ fn freezing_rune_fails_with_postage_dust() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -242,13 +247,14 @@ fn freezing_rune_fails_with_postage_dust() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "1000".parse().unwrap(),
         premine: "1000".parse().unwrap(),
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -282,7 +288,7 @@ fn freezing_rune_removes_balance() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -299,7 +305,8 @@ fn freezing_rune_removes_balance() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -315,13 +322,14 @@ fn freezing_rune_removes_balance() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "500".parse().unwrap(),
         premine: "500".parse().unwrap(),
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -407,7 +415,7 @@ fn freezing_rune_on_multiple_outpoints_removes_multiple_balances() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -424,7 +432,8 @@ fn freezing_rune_on_multiple_outpoints_removes_multiple_balances() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -440,13 +449,14 @@ fn freezing_rune_on_multiple_outpoints_removes_multiple_balances() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "500".parse().unwrap(),
         premine: "500".parse().unwrap(),
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -532,7 +542,7 @@ fn freeze_dry_run() {
     spacers: 0,
   };
 
-  let freezer = SpacedRune {
+  let admin = SpacedRune {
     rune: Rune(RUNE + 1),
     spacers: 0,
   };
@@ -549,7 +559,8 @@ fn freeze_dry_run() {
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: Some(freezer),
+        freezable: false,
+        admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -565,13 +576,14 @@ fn freeze_dry_run() {
     batch::File {
       etching: Some(batch::Etching {
         divisibility: 1,
-        rune: freezer,
+        rune: admin,
         supply: "500".parse().unwrap(),
         premine: "500".parse().unwrap(),
         symbol: '¢',
         terms: None,
         turbo: false,
-        freezer: None,
+        freezable: false,
+        admin: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

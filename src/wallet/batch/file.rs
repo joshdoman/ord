@@ -392,7 +392,8 @@ inscriptions:
             }),
           }),
           turbo: true,
-          freezer: Some("THE•BEST•RUNE•FREEZER".parse().unwrap()),
+          freezable: true,
+          admin: Some("THE•BEST•RUNE•ADMIN".parse().unwrap()),
         }),
         inscriptions: vec![
           batch::Entry {
