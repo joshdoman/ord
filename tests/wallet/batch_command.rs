@@ -1504,6 +1504,7 @@ fn batch_can_etch_rune() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -1618,6 +1619,7 @@ fn batch_can_etch_turbo_rune() {
         symbol: '¢',
         terms: None,
         turbo: true,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -1670,6 +1672,7 @@ fn batch_can_etch_freezable_rune() {
         symbol: '¢',
         terms: None,
         turbo: true,
+        freezable: true,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -1722,6 +1725,7 @@ fn batch_can_etch_rune_without_premine() {
           offset: None,
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -1810,6 +1814,7 @@ fn batch_inscribe_can_etch_rune_with_offset() {
           height: None,
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -1885,6 +1890,7 @@ fn batch_inscribe_can_etch_rune_with_height() {
           offset: None,
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -1953,6 +1959,7 @@ fn etch_existing_rune_error() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -1996,6 +2003,7 @@ fn etch_reserved_rune_error() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2039,6 +2047,7 @@ fn etch_sub_minimum_rune_error() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2082,6 +2091,7 @@ fn etch_requires_rune_index() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2125,6 +2135,7 @@ fn etch_divisibility_over_maximum_error() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2176,6 +2187,7 @@ fn etch_mintable_overflow_error() {
             height: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2227,6 +2239,7 @@ fn etch_mintable_plus_premine_overflow_error() {
             height: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2278,6 +2291,7 @@ fn incorrect_supply_error() {
             height: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2329,6 +2343,7 @@ fn zero_offset_interval_error() {
             height: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2380,6 +2395,7 @@ fn zero_height_interval_error() {
             offset: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2431,6 +2447,7 @@ fn invalid_start_height_error() {
             offset: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2484,6 +2501,7 @@ fn invalid_end_height_error() {
             offset: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2529,6 +2547,7 @@ fn zero_supply_error() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2577,6 +2596,7 @@ fn zero_cap_error() {
             offset: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2625,6 +2645,7 @@ fn zero_amount_error() {
             offset: None,
           }),
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2679,6 +2700,7 @@ fn oversize_runestone_error() {
             amount: "1".parse().unwrap(),
           }),
           turbo: true,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {
@@ -2735,6 +2757,7 @@ fn oversize_runestones_are_allowed_with_no_limit() {
           amount: "1".parse().unwrap(),
         }),
         turbo: true,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -2868,6 +2891,7 @@ fn forbid_etching_below_rune_activation_height() {
           symbol: '¢',
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         inscriptions: vec![batch::Entry {

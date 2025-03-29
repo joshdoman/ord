@@ -57,6 +57,7 @@ fn with_frozen_runes() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -79,6 +80,7 @@ fn with_frozen_runes() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

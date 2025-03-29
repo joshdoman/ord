@@ -26,6 +26,7 @@ fn addresses() {
           ..default()
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

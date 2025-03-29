@@ -154,18 +154,18 @@ type TermsEntryValue = (
 );
 
 pub(super) type RuneEntryValue = (
-  u64,                     // block
-  (u128, u128),            // (burned, lost)
-  u8,                      // divisibility
-  (u128, u128),            // etching
-  u128,                    // mints
-  u64,                     // number
-  u128,                    // premine
-  (u128, u32),             // spaced rune
-  Option<char>,            // symbol
-  Option<TermsEntryValue>, // terms
-  u64,                     // timestamp
-  (bool, Option<u128>),    // (turbo, admin)
+  u64,                        // block
+  (u128, u128),               // (burned, lost)
+  u8,                         // divisibility
+  (u128, u128),               // etching
+  u128,                       // mints
+  u64,                        // number
+  u128,                       // premine
+  (u128, u32),                // spaced rune
+  Option<char>,               // symbol
+  Option<TermsEntryValue>,    // terms
+  u64,                        // timestamp
+  (bool, bool, Option<u128>), // (turbo, freezable admin)
 );
 
 impl Default for RuneEntry {
@@ -206,7 +206,7 @@ impl Entry for RuneEntry {
       symbol,
       terms,
       timestamp,
-      (turbo, admin),
+      (turbo, freezable, admin),
     ): RuneEntryValue,
   ) -> Self {
     Self {
@@ -240,7 +240,7 @@ impl Entry for RuneEntry {
       }),
       timestamp,
       turbo,
-      freezable: false,
+      freezable,
       admin: admin.map(Rune),
     }
   }
@@ -277,7 +277,7 @@ impl Entry for RuneEntry {
          }| (cap, height, amount, offset),
       ),
       self.timestamp,
-      (self.turbo, self.admin.map(|admin| admin.0)),
+      (self.turbo, self.freezable, self.admin.map(|admin| admin.0)),
     )
   }
 }
@@ -611,6 +611,7 @@ mod tests {
       symbol: Some('a'),
       timestamp: 10,
       turbo: true,
+      freezable: false,
       admin: None,
     };
 
@@ -629,7 +630,7 @@ mod tests {
       Some('a'),
       Some((Some(1), (Some(2), Some(3)), Some(4), (Some(5), Some(6)))),
       10,
-      (true, None),
+      (true, false, None),
     );
 
     assert_eq!(entry.store(), value);

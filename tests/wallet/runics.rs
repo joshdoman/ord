@@ -24,6 +24,7 @@ fn wallet_runics() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

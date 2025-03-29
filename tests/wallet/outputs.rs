@@ -121,6 +121,7 @@ fn outputs_includes_runes_and_inscriptions() {
           ..default()
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

@@ -25,6 +25,7 @@ fn freezing_rune_fails_if_not_freezable() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -76,6 +77,7 @@ fn freezing_rune_fails_if_admin_has_not_been_etched() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -148,6 +150,7 @@ fn freezing_rune_fails_if_no_admin_balance() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -175,6 +178,7 @@ fn freezing_rune_fails_if_no_admin_balance() {
           height: None,
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -226,6 +230,7 @@ fn freezing_rune_fails_with_postage_dust() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -248,6 +253,7 @@ fn freezing_rune_fails_with_postage_dust() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -299,6 +305,7 @@ fn freezing_rune_removes_balance() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -321,6 +328,7 @@ fn freezing_rune_removes_balance() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -424,6 +432,7 @@ fn freezing_rune_on_multiple_outpoints_removes_multiple_balances() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -446,6 +455,7 @@ fn freezing_rune_on_multiple_outpoints_removes_multiple_balances() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {
@@ -549,6 +559,7 @@ fn freeze_dry_run() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: Some(admin),
       }),
       inscriptions: vec![batch::Entry {
@@ -571,6 +582,7 @@ fn freeze_dry_run() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

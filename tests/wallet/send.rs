@@ -1074,6 +1074,7 @@ fn sending_rune_with_divisibility_works() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

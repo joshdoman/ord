@@ -195,6 +195,10 @@ impl Runestone {
         Flag::Turbo.set(&mut flags);
       }
 
+      if etching.freezable {
+        Flag::Freezable.set(&mut flags);
+      }
+
       Tag::Flags.encode([flags], &mut payload);
 
       Tag::Rune.encode_option(etching.rune.map(|rune| rune.0), &mut payload);
@@ -1160,7 +1164,7 @@ mod tests {
     assert_eq!(
       decipher(&[
         Tag::Flags.into(),
-        Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask(),
+        Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask() | Flag::Freezable.mask(),
         Tag::Rune.into(),
         4,
         Tag::Divisibility.into(),
@@ -1210,6 +1214,7 @@ mod tests {
             height: (None, None),
           }),
           turbo: true,
+          freezable: true,
           admin: Some(Rune(5)),
         }),
         pointer: Some(0),
@@ -1692,6 +1697,7 @@ mod tests {
           height: (Some(u32::MAX.into()), Some(u32::MAX.into())),
         }),
         turbo: true,
+        freezable: true,
         admin: Some(Rune(u128::MAX)),
         premine: Some(u64::MAX.into()),
         rune: Some(Rune(u128::MAX)),
@@ -1707,6 +1713,7 @@ mod tests {
         divisibility: Some(Etching::MAX_DIVISIBILITY),
         terms: None,
         turbo: true,
+        freezable: true,
         admin: Some(Rune(u128::MAX)),
         premine: Some(u128::MAX),
         rune: Some(Rune(u128::MAX)),
@@ -1980,6 +1987,7 @@ mod tests {
             offset: (Some(15), Some(16)),
           }),
           turbo: true,
+          freezable: true,
           admin: Some(Rune(10)),
         }),
         mint: Some(RuneId::new(17, 18).unwrap()),
@@ -1995,7 +2003,7 @@ mod tests {
       },
       &[
         Tag::Flags.into(),
-        Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask(),
+        Flag::Etching.mask() | Flag::Terms.mask() | Flag::Turbo.mask() | Flag::Freezable.mask(),
         Tag::Rune.into(),
         9,
         Tag::Divisibility.into(),
@@ -2068,6 +2076,7 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         ..default()
@@ -2085,6 +2094,7 @@ mod tests {
           symbol: None,
           terms: None,
           turbo: false,
+          freezable: false,
           admin: None,
         }),
         ..default()

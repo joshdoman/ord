@@ -133,6 +133,7 @@ fn mint_does_not_select_inscription() {
           height: None,
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

@@ -392,6 +392,7 @@ inscriptions:
             }),
           }),
           turbo: true,
+          freezable: true,
           admin: Some("THE•BEST•RUNE•ADMIN".parse().unwrap()),
         }),
         inscriptions: vec![
