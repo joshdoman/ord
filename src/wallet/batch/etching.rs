@@ -11,5 +11,6 @@ pub struct Etching {
   pub premine: Decimal,
   pub terms: Option<batch::Terms>,
   pub turbo: bool,
+  pub freezable: bool,
   pub admin: Option<SpacedRune>,
 }

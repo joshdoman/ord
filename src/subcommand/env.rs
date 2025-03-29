@@ -92,6 +92,7 @@ rpcport={bitcoind_port}
           ..default()
         }),
         turbo: false,
+        freezable: false,
         admin: None,
       }),
       inscriptions: vec![batch::Entry {

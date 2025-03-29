@@ -86,6 +86,7 @@ impl Runestone {
         ),
       }),
       turbo: Flag::Turbo.take(&mut flags),
+      freezable: Flag::Freezable.take(&mut flags),
       admin: Tag::Admin.take(&mut fields, |[admin]| Some(Rune(admin))),
     });
 

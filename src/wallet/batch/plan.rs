@@ -474,6 +474,7 @@ impl Plan {
             })
             .transpose()?,
           turbo: etching.turbo,
+          freezable: etching.freezable,
           admin: etching.admin.map(|admin| admin.rune),
         }),
         mint: None,
