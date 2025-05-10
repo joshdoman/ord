@@ -67,6 +67,8 @@ mod tests {
           timestamp: 0,
           turbo: true,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: true,
@@ -127,6 +129,8 @@ mod tests {
   <dd>true</dd>
   <dt>freezer</dt>
   <dd>none</dd>
+  <dt>minter</dt>
+  <dd>none</dd>
   <dt>etching</dt>
   <dd><a class=collapse href=/tx/0{64}>0{64}</a></dd>
   <dt>parent</dt>
@@ -158,6 +162,8 @@ mod tests {
           timestamp: 0,
           turbo: false,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -194,6 +200,8 @@ mod tests {
           timestamp: 0,
           turbo: false,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -235,6 +243,8 @@ mod tests {
           timestamp: 0,
           turbo: false,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -293,6 +303,8 @@ mod tests {
           timestamp: 0,
           turbo: false,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 0, tx: 0 },
         mintable: false,
@@ -332,6 +344,8 @@ mod tests {
           timestamp: 0,
           turbo: false,
           freezer: None,
+          minter: None,
+          minted_by_edict: 0,
         },
         id: RuneId { block: 0, tx: 0 },
         mintable: true,

@@ -93,6 +93,7 @@ rpcport={bitcoind_port}
         }),
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("env/inscription.txt".into()),

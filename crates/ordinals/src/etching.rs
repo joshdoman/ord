@@ -10,6 +10,7 @@ pub struct Etching {
   pub terms: Option<Terms>,
   pub turbo: bool,
   pub freezer: Option<Rune>,
+  pub minter: Option<Rune>,
 }
 
 impl Etching {

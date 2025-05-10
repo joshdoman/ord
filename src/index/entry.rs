@@ -55,11 +55,18 @@ pub struct RuneEntry {
   pub timestamp: u64,
   pub turbo: bool,
   pub freezer: Option<Rune>,
+  pub minter: Option<Rune>,
+  pub minted_by_edict: u128,
 }
 
 impl RuneEntry {
   pub fn mintable(&self, height: u64) -> Result<u128, MintError> {
+    let max_mintable = self.max_supply() - self.supply();
+
     let Some(terms) = self.terms else {
+      if self.is_mintable_by_edict() && max_mintable > 0 {
+        return Ok(max_mintable);
+      }
       return Err(MintError::Unmintable);
     };
 
@@ -75,6 +82,13 @@ impl RuneEntry {
       }
     }
 
+    if self.is_mintable_by_edict() {
+      if max_mintable > 0 {
+        return Ok(max_mintable);
+      }
+      return Err(MintError::Unmintable);
+    }
+
     let cap = terms.cap.unwrap_or_default();
 
     if self.mints >= cap {
@@ -84,6 +98,10 @@ impl RuneEntry {
     Ok(terms.amount.unwrap_or_default())
   }
 
+  pub fn is_mintable_by_edict(&self) -> bool {
+    self.minter.is_some() && self.terms.and_then(|terms| terms.amount).is_none()
+  }
+
   pub fn supply(&self) -> u128 {
     self.premine
       + self.mints
@@ -91,15 +109,23 @@ impl RuneEntry {
           .terms
           .and_then(|terms| terms.amount)
           .unwrap_or_default()
+      + self.minted_by_edict
   }
 
   pub fn max_supply(&self) -> u128 {
-    self.premine
-      + self.terms.and_then(|terms| terms.cap).unwrap_or_default()
-        * self
-          .terms
-          .and_then(|terms| terms.amount)
-          .unwrap_or_default()
+    if self.is_mintable_by_edict() {
+      self
+        .terms
+        .and_then(|terms| terms.cap)
+        .map_or(u128::MAX, |cap| self.premine + cap)
+    } else {
+      self.premine
+        + self.terms.and_then(|terms| terms.cap).unwrap_or_default()
+          * self
+            .terms
+            .and_then(|terms| terms.amount)
+            .unwrap_or_default()
+    }
   }
 
   pub fn pile(&self, amount: u128) -> Pile {
@@ -153,18 +179,18 @@ type TermsEntryValue = (
 );
 
 pub(super) type RuneEntryValue = (
-  u64,                     // block
-  (u128, u128),            // (burned, lost)
-  u8,                      // divisibility
-  (u128, u128),            // etching
-  u128,                    // mints
-  u64,                     // number
-  u128,                    // premine
-  (u128, u32),             // spaced rune
-  Option<char>,            // symbol
-  Option<TermsEntryValue>, // terms
-  u64,                     // timestamp
-  (bool, Option<u128>),    // (turbo, freezer)
+  u64,                                      // block
+  (u128, u128),                             // (burned, lost)
+  u8,                                       // divisibility
+  (u128, u128),                             // etching
+  u128,                                     // mints
+  u64,                                      // number
+  u128,                                     // premine
+  (u128, u32),                              // spaced rune
+  Option<char>,                             // symbol
+  Option<TermsEntryValue>,                  // terms
+  u64,                                      // timestamp
+  (bool, Option<u128>, Option<u128>, u128), // (turbo, freezer, minter, minted_by_edict)
 );
 
 impl Default for RuneEntry {
@@ -184,6 +210,8 @@ impl Default for RuneEntry {
       timestamp: 0,
       turbo: false,
       freezer: None,
+      minter: None,
+      minted_by_edict: 0,
     }
   }
 }
@@ -204,7 +232,7 @@ impl Entry for RuneEntry {
       symbol,
       terms,
       timestamp,
-      (turbo, freezer),
+      (turbo, freezer, minter, minted_by_edict),
     ): RuneEntryValue,
   ) -> Self {
     Self {
@@ -239,6 +267,8 @@ impl Entry for RuneEntry {
       timestamp,
       turbo,
       freezer: freezer.map(Rune),
+      minter: minter.map(Rune),
+      minted_by_edict,
     }
   }
 
@@ -274,7 +304,12 @@ impl Entry for RuneEntry {
          }| (cap, height, amount, offset),
       ),
       self.timestamp,
-      (self.turbo, self.freezer.map(|freezer| freezer.0)),
+      (
+        self.turbo,
+        self.freezer.map(|freezer| freezer.0),
+        self.minter.map(|minter| minter.0),
+        self.minted_by_edict,
+      ),
     )
   }
 }
@@ -609,6 +644,8 @@ mod tests {
       timestamp: 10,
       turbo: true,
       freezer: None,
+      minter: None,
+      minted_by_edict: 0,
     };
 
     let value = (
@@ -626,7 +663,7 @@ mod tests {
       Some('a'),
       Some((Some(1), (Some(2), Some(3)), Some(4), (Some(5), Some(6)))),
       10,
-      (true, None),
+      (true, None, None, 0),
     );
 
     assert_eq!(entry.store(), value);
@@ -889,6 +926,236 @@ mod tests {
   }
 
   #[test]
+  fn is_mintable_by_edict() {
+    assert!(RuneEntry {
+      minter: Some(Rune(0)),
+      ..default()
+    }
+    .is_mintable_by_edict());
+
+    assert!(RuneEntry {
+      premine: u128::MAX / 2,
+      minter: Some(Rune(0)),
+      ..default()
+    }
+    .is_mintable_by_edict());
+
+    assert!(RuneEntry {
+      terms: Some(Terms {
+        cap: Some(1000),
+        ..default()
+      }),
+      minter: Some(Rune(0)),
+      ..default()
+    }
+    .is_mintable_by_edict(),);
+
+    assert!(!RuneEntry {
+      terms: Some(Terms {
+        amount: Some(1000),
+        ..default()
+      }),
+      minter: Some(Rune(0)),
+      ..default()
+    }
+    .is_mintable_by_edict(),);
+
+    assert!(!RuneEntry {
+      premine: 1000,
+      ..default()
+    }
+    .is_mintable_by_edict(),);
+  }
+
+  #[test]
+  fn mintable_by_edict() {
+    assert_eq!(
+      RuneEntry {
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Ok(u128::MAX),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        premine: 1000,
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Ok(u128::MAX - 1000),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(1000),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Ok(1000),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(0),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Err(MintError::Unmintable),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(1000),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        minted_by_edict: 1000,
+        ..default()
+      }
+      .mintable(0),
+      Err(MintError::Unmintable),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(0),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Err(MintError::Unmintable),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        minter: Some(Rune(0)),
+        minted_by_edict: u128::MAX,
+        ..default()
+      }
+      .mintable(0),
+      Err(MintError::Unmintable),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          height: (None, Some(10)),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(100),
+      Err(MintError::End(10)),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          height: (Some(100), None),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(0),
+      Err(MintError::Start(100)),
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          height: (None, Some(10)),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .mintable(100),
+      Err(MintError::End(10)),
+    );
+  }
+
+  #[test]
+  fn max_supply() {
+    assert_eq!(
+      RuneEntry {
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .max_supply(),
+      u128::MAX,
+    );
+
+    assert_eq!(
+      RuneEntry {
+        premine: 1000,
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .max_supply(),
+      u128::MAX,
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(2000),
+          ..default()
+        }),
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .max_supply(),
+      2000,
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          cap: Some(2000),
+          ..default()
+        }),
+        premine: 1000,
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .max_supply(),
+      3000,
+    );
+
+    assert_eq!(
+      RuneEntry {
+        terms: Some(Terms {
+          amount: Some(1000),
+          cap: Some(1),
+          ..default()
+        }),
+        premine: 1000,
+        minter: Some(Rune(0)),
+        ..default()
+      }
+      .max_supply(),
+      2000,
+    );
+  }
+
+  #[test]
   fn supply() {
     assert_eq!(
       RuneEntry {
@@ -942,6 +1209,16 @@ mod tests {
       }
       .supply(),
       1001
+    );
+
+    assert_eq!(
+      RuneEntry {
+        premine: 1,
+        minted_by_edict: 10,
+        ..default()
+      }
+      .supply(),
+      11
     );
   }
 }

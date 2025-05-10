@@ -15,6 +15,7 @@ pub(super) enum Tag {
   Mint = 20,
   Pointer = 22,
   Freezer = 24,
+  Minter = 26,
   #[allow(unused)]
   Cenotaph = 126,
 

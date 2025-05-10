@@ -34,6 +34,7 @@ fn minting_rune_and_fails_if_after_end() {
         }),
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -124,6 +125,7 @@ fn minting_rune_fails_if_not_mintable() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -199,6 +201,7 @@ fn minting_rune_and_then_sending_works() {
         }),
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -291,6 +294,7 @@ fn minting_rune_with_destination() {
         symbol: '¢',
         turbo: false,
         freezer: None,
+        minter: None,
         terms: Some(batch::Terms {
           cap: 1,
           offset: Some(batch::Range {
@@ -397,6 +401,7 @@ fn minting_rune_with_postage() {
         symbol: '¢',
         turbo: false,
         freezer: None,
+        minter: None,
         terms: Some(batch::Terms {
           cap: 1,
           offset: Some(batch::Range {
@@ -467,6 +472,7 @@ fn minting_rune_with_postage_dust() {
         symbol: '¢',
         turbo: false,
         freezer: None,
+        minter: None,
         terms: Some(batch::Terms {
           cap: 1,
           offset: Some(batch::Range {
@@ -530,6 +536,7 @@ fn minting_is_allowed_when_mint_begins_next_block() {
         }),
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

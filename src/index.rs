@@ -55,6 +55,7 @@ const SCHEMA_VERSION: u64 = 31;
 
 define_multimap_table! { OUTPOINT_TO_FROZEN_RUNE_ID, &OutPointValue, RuneIdValue }
 define_multimap_table! { RUNE_TO_FREEZABLE_RUNE_ID, u128, RuneIdValue }
+define_multimap_table! { RUNE_TO_MINTABLE_RUNE_ID, u128, RuneIdValue }
 define_multimap_table! { SAT_TO_SEQUENCE_NUMBER, u64, u32 }
 define_multimap_table! { SEQUENCE_NUMBER_TO_CHILDREN, u32, u32 }
 define_multimap_table! { SCRIPT_PUBKEY_TO_OUTPOINT, &[u8], OutPointValue }
@@ -313,6 +314,7 @@ impl Index {
 
         tx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
         tx.open_multimap_table(RUNE_TO_FREEZABLE_RUNE_ID)?;
+        tx.open_multimap_table(RUNE_TO_MINTABLE_RUNE_ID)?;
         tx.open_multimap_table(SAT_TO_SEQUENCE_NUMBER)?;
         tx.open_multimap_table(SCRIPT_PUBKEY_TO_OUTPOINT)?;
         tx.open_multimap_table(SEQUENCE_NUMBER_TO_CHILDREN)?;
@@ -408,6 +410,8 @@ impl Index {
               timestamp: 0,
               turbo: true,
               freezer: None,
+              minter: None,
+              minted_by_edict: 0,
             }
             .store(),
           )?;

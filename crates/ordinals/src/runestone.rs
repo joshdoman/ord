@@ -87,6 +87,7 @@ impl Runestone {
       }),
       turbo: Flag::Turbo.take(&mut flags),
       freezer: Tag::Freezer.take(&mut fields, |[freezer]| Some(Rune(freezer))),
+      minter: Tag::Minter.take(&mut fields, |[minter]| Some(Rune(minter))),
     });
 
     let mint = Tag::Mint.take(&mut fields, |[block, tx]| {
@@ -212,6 +213,7 @@ impl Runestone {
       }
 
       Tag::Freezer.encode_option(etching.freezer.map(|rune| rune.0), &mut payload);
+      Tag::Minter.encode_option(etching.minter.map(|rune| rune.0), &mut payload);
     }
 
     if let Some(RuneId { block, tx }) = self.mint {
@@ -1180,6 +1182,8 @@ mod tests {
         0,
         Tag::Freezer.into(),
         5,
+        Tag::Minter.into(),
+        6,
         Tag::Mint.into(),
         1,
         Tag::Mint.into(),
@@ -1210,6 +1214,7 @@ mod tests {
           }),
           turbo: true,
           freezer: Some(Rune(5)),
+          minter: Some(Rune(6)),
         }),
         pointer: Some(0),
         mint: Some(RuneId::new(1, 1).unwrap()),
@@ -1692,12 +1697,13 @@ mod tests {
         }),
         turbo: true,
         freezer: Some(Rune(u128::MAX)),
+        minter: Some(Rune(u128::MAX)),
         premine: Some(u64::MAX.into()),
         rune: Some(Rune(u128::MAX)),
         symbol: Some('\u{10FFFF}'),
         spacers: Some(Etching::MAX_SPACERS),
       }),
-      109,
+      129,
     );
 
     case(
@@ -1707,12 +1713,13 @@ mod tests {
         terms: None,
         turbo: true,
         freezer: Some(Rune(u128::MAX)),
+        minter: Some(Rune(u128::MAX)),
         premine: Some(u128::MAX),
         rune: Some(Rune(u128::MAX)),
         symbol: Some('\u{10FFFF}'),
         spacers: Some(Etching::MAX_SPACERS),
       }),
-      76,
+      97,
     );
 
     case(
@@ -1980,6 +1987,7 @@ mod tests {
           }),
           turbo: true,
           freezer: Some(Rune(10)),
+          minter: Some(Rune(11)),
         }),
         mint: Some(RuneId::new(17, 18).unwrap()),
         pointer: Some(0),
@@ -2019,6 +2027,8 @@ mod tests {
         16,
         Tag::Freezer.into(),
         10,
+        Tag::Minter.into(),
+        11,
         Tag::Mint.into(),
         17,
         Tag::Mint.into(),
@@ -2068,6 +2078,7 @@ mod tests {
           terms: None,
           turbo: false,
           freezer: None,
+          minter: None,
         }),
         ..default()
       },
@@ -2085,6 +2096,7 @@ mod tests {
           terms: None,
           turbo: false,
           freezer: None,
+          minter: None,
         }),
         ..default()
       },

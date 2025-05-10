@@ -58,6 +58,7 @@ fn with_frozen_runes() {
         terms: None,
         turbo: false,
         freezer: Some(freezer),
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -80,6 +81,7 @@ fn with_frozen_runes() {
         terms: None,
         turbo: false,
         freezer: None,
+        minter: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
