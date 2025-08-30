@@ -107,6 +107,7 @@ fn simple_split() {
         rune: SpacedRune { rune, spacers: 1 },
         symbol: '¢',
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -126,6 +127,7 @@ fn simple_split() {
       ordinal: 10000,
       runic: Some(10000),
       runes: Some([(spaced_rune, "100.0".parse().unwrap())].into()),
+      frozen_runes: Some(BTreeMap::new()),
       total: 7 * 50 * COIN_VALUE,
     }
   );
@@ -162,6 +164,7 @@ outputs:
       ordinal: 10000,
       runic: Some(666),
       runes: Some([(spaced_rune, "49.9".parse().unwrap())].into()),
+      frozen_runes: Some(BTreeMap::new()),
       total: 7 * 50 * COIN_VALUE - 294,
     }
   );
@@ -229,6 +232,7 @@ fn oversize_op_returns_are_allowed_with_flag() {
         rune: SpacedRune { rune, spacers: 1 },
         symbol: '¢',
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),

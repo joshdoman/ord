@@ -1,4 +1,7 @@
-use super::*;
+use {
+  super::*,
+  freezable_rune_updater::{FreezableRuneUpdater, Tables},
+};
 
 pub(super) struct RuneUpdater<'a, 'tx, 'client> {
   pub(super) block_time: u32,
@@ -9,19 +12,43 @@ pub(super) struct RuneUpdater<'a, 'tx, 'client> {
   pub(super) id_to_entry: &'a mut Table<'tx, RuneIdValue, RuneEntryValue>,
   pub(super) inscription_id_to_sequence_number: &'a Table<'tx, InscriptionIdValue, u32>,
   pub(super) minimum: Rune,
+  pub(super) rune_to_freezable_rune_id: &'a mut MultimapTable<'tx, u128, RuneIdValue>,
+  pub(super) outpoint_id_to_outpoint: &'a mut Table<'tx, OutPointIdValue, OutPointValue>,
+  pub(super) outpoint_to_outpoint_id: &'a mut Table<'tx, &'static OutPointValue, OutPointIdValue>,
   pub(super) outpoint_to_balances: &'a mut Table<'tx, &'static OutPointValue, &'static [u8]>,
   pub(super) rune_to_id: &'a mut Table<'tx, u128, RuneIdValue>,
   pub(super) runes: u64,
   pub(super) sequence_number_to_rune_id: &'a mut Table<'tx, u32, RuneIdValue>,
   pub(super) statistic_to_count: &'a mut Table<'tx, u64, u64>,
   pub(super) transaction_id_to_rune: &'a mut Table<'tx, &'static TxidValue, u128>,
+  pub(super) freezable_rune_updater: FreezableRuneUpdater<'a, 'tx>,
+  pub(super) index_freezable_runes: bool,
 }
 
 impl RuneUpdater<'_, '_, '_> {
   pub(super) fn index_runes(&mut self, tx_index: u32, tx: &Transaction, txid: Txid) -> Result<()> {
     let artifact = Runestone::decipher(tx);
 
-    let mut unallocated = self.unallocated(tx)?;
+    let (unallocated, unallocated_by_outpoint) = self.unallocated(tx)?;
+    let mut unallocated = unallocated;
+
+    if self.index_freezable_runes {
+      let tables = Tables {
+        id_to_entry: self.id_to_entry,
+        rune_to_id: self.rune_to_id,
+        rune_to_freezable_rune_id: self.rune_to_freezable_rune_id,
+        outpoint_id_to_outpoint: self.outpoint_id_to_outpoint,
+        outpoint_to_balances: self.outpoint_to_balances,
+      };
+
+      self.freezable_rune_updater.pre_process_runes(
+        tables,
+        txid,
+        &artifact,
+        &mut unallocated,
+        unallocated_by_outpoint,
+      )?;
+    }
 
     let mut allocated: Vec<HashMap<RuneId, Lot>> = vec![HashMap::new(); tx.output.len()];
 
@@ -209,6 +236,21 @@ impl RuneUpdater<'_, '_, '_> {
         }
       }
 
+      if self.index_freezable_runes {
+        let outpoint_id = OutPointId {
+          block: self.height.into(),
+          tx: tx_index,
+          output: outpoint.vout,
+        };
+
+        self
+          .outpoint_id_to_outpoint
+          .insert(outpoint_id.store(), outpoint.store())?;
+        self
+          .outpoint_to_outpoint_id
+          .insert(&outpoint.store(), outpoint_id.store())?;
+      }
+
       self
         .outpoint_to_balances
         .insert(&outpoint.store(), buffer.as_slice())?;
@@ -238,6 +280,10 @@ impl RuneUpdater<'_, '_, '_> {
       self.id_to_entry.insert(&rune_id.store(), entry.store())?;
     }
 
+    if self.index_freezable_runes {
+      self.freezable_rune_updater.update(self.id_to_entry)?;
+    }
+
     Ok(())
   }
 
@@ -264,6 +310,7 @@ impl RuneUpdater<'_, '_, '_> {
       Artifact::Cenotaph(_) => RuneEntry {
         block: id.block,
         burned: 0,
+        lost: 0,
         divisibility: 0,
         etching: txid,
         terms: None,
@@ -274,6 +321,7 @@ impl RuneUpdater<'_, '_, '_> {
         symbol: None,
         timestamp: self.block_time.into(),
         turbo: false,
+        freezer: None,
       },
       Artifact::Runestone(Runestone { etching, .. }) => {
         let Etching {
@@ -283,12 +331,14 @@ impl RuneUpdater<'_, '_, '_> {
           spacers,
           symbol,
           turbo,
+          freezer,
           ..
         } = etching.unwrap();
 
         RuneEntry {
           block: id.block,
           burned: 0,
+          lost: 0,
           divisibility: divisibility.unwrap_or_default(),
           etching: txid,
           terms,
@@ -302,11 +352,20 @@ impl RuneUpdater<'_, '_, '_> {
           symbol,
           timestamp: self.block_time.into(),
           turbo,
+          freezer,
         }
       }
     };
 
     self.id_to_entry.insert(id.store(), entry.store())?;
+
+    if let Some(freezer) = entry.freezer {
+      if self.index_freezable_runes {
+        self
+          .rune_to_freezable_rune_id
+          .insert(freezer.0, id.store())?;
+      }
+    }
 
     if let Some(sender) = self.event_sender {
       sender.blocking_send(Event::RuneEtched {
@@ -466,9 +525,13 @@ impl RuneUpdater<'_, '_, '_> {
     Ok(false)
   }
 
-  fn unallocated(&mut self, tx: &Transaction) -> Result<HashMap<RuneId, Lot>> {
+  fn unallocated(
+    &mut self,
+    tx: &Transaction,
+  ) -> Result<(HashMap<RuneId, Lot>, HashMap<OutPoint, Vec<(RuneId, Lot)>>)> {
     // map of rune ID to un-allocated balance of that rune
     let mut unallocated: HashMap<RuneId, Lot> = HashMap::new();
+    let mut unallocated_by_outpoint: HashMap<OutPoint, Vec<(RuneId, Lot)>> = HashMap::new();
 
     // increment unallocated runes with the runes in tx inputs
     for input in &tx.input {
@@ -482,10 +545,22 @@ impl RuneUpdater<'_, '_, '_> {
           let ((id, balance), len) = Index::decode_rune_balance(&buffer[i..]).unwrap();
           i += len;
           *unallocated.entry(id).or_default() += balance;
+          unallocated_by_outpoint
+            .entry(input.previous_output)
+            .or_default()
+            .push((id, Lot(balance)));
         }
+      }
+
+      // Remove outpoint id mappings
+      if let Some(outpoint_id) = self
+        .outpoint_to_outpoint_id
+        .remove(&input.previous_output.store())?
+      {
+        self.outpoint_id_to_outpoint.remove(outpoint_id.value())?;
       }
     }
 
-    Ok(unallocated)
+    Ok((unallocated, unallocated_by_outpoint))
   }
 }

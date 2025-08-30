@@ -43,6 +43,7 @@ impl Entry for Rune {
 pub struct RuneEntry {
   pub block: u64,
   pub burned: u128,
+  pub lost: u128,
   pub divisibility: u8,
   pub etching: Txid,
   pub mints: u128,
@@ -53,6 +54,7 @@ pub struct RuneEntry {
   pub terms: Option<Terms>,
   pub timestamp: u64,
   pub turbo: bool,
+  pub freezer: Option<Rune>,
 }
 
 impl RuneEntry {
@@ -152,7 +154,7 @@ type TermsEntryValue = (
 
 pub(super) type RuneEntryValue = (
   u64,                     // block
-  u128,                    // burned
+  (u128, u128),            // (burned, lost)
   u8,                      // divisibility
   (u128, u128),            // etching
   u128,                    // mints
@@ -162,7 +164,7 @@ pub(super) type RuneEntryValue = (
   Option<char>,            // symbol
   Option<TermsEntryValue>, // terms
   u64,                     // timestamp
-  bool,                    // turbo
+  (bool, Option<u128>),    // (turbo, freezer)
 );
 
 impl Default for RuneEntry {
@@ -170,6 +172,7 @@ impl Default for RuneEntry {
     Self {
       block: 0,
       burned: 0,
+      lost: 0,
       divisibility: 0,
       etching: Txid::all_zeros(),
       mints: 0,
@@ -180,6 +183,7 @@ impl Default for RuneEntry {
       terms: None,
       timestamp: 0,
       turbo: false,
+      freezer: None,
     }
   }
 }
@@ -190,7 +194,7 @@ impl Entry for RuneEntry {
   fn load(
     (
       block,
-      burned,
+      (burned, lost),
       divisibility,
       etching,
       mints,
@@ -200,12 +204,13 @@ impl Entry for RuneEntry {
       symbol,
       terms,
       timestamp,
-      turbo,
+      (turbo, freezer),
     ): RuneEntryValue,
   ) -> Self {
     Self {
       block,
       burned,
+      lost,
       divisibility,
       etching: {
         let low = etching.0.to_le_bytes();
@@ -233,13 +238,14 @@ impl Entry for RuneEntry {
       }),
       timestamp,
       turbo,
+      freezer: freezer.map(Rune),
     }
   }
 
   fn store(self) -> Self::Value {
     (
       self.block,
-      self.burned,
+      (self.burned, self.lost),
       self.divisibility,
       {
         let bytes = self.etching.to_byte_array();
@@ -268,7 +274,7 @@ impl Entry for RuneEntry {
          }| (cap, height, amount, offset),
       ),
       self.timestamp,
-      self.turbo,
+      (self.turbo, self.freezer.map(|freezer| freezer.0)),
     )
   }
 }
@@ -431,6 +437,20 @@ impl Entry for OutPoint {
   }
 }
 
+pub(super) type OutPointIdValue = (u64, u32, u32);
+
+impl Entry for OutPointId {
+  type Value = OutPointIdValue;
+
+  fn load((block, tx, output): Self::Value) -> Self {
+    Self { block, tx, output }
+  }
+
+  fn store(self) -> Self::Value {
+    (self.block, self.tx, self.output)
+  }
+}
+
 pub(super) type SatPointValue = [u8; 44];
 
 impl Entry for SatPoint {
@@ -565,6 +585,7 @@ mod tests {
     let entry = RuneEntry {
       block: 12,
       burned: 1,
+      lost: 2,
       divisibility: 3,
       etching: Txid::from_byte_array([
         0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
@@ -587,11 +608,12 @@ mod tests {
       symbol: Some('a'),
       timestamp: 10,
       turbo: true,
+      freezer: None,
     };
 
     let value = (
       12,
-      1,
+      (1, 2),
       3,
       (
         0x0F0E0D0C0B0A09080706050403020100,
@@ -604,7 +626,7 @@ mod tests {
       Some('a'),
       Some((Some(1), (Some(2), Some(3)), Some(4), (Some(5), Some(6)))),
       10,
-      true,
+      (true, None),
     );
 
     assert_eq!(entry.store(), value);

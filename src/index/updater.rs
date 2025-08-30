@@ -1,5 +1,8 @@
 use {
-  self::{inscription_updater::InscriptionUpdater, rune_updater::RuneUpdater},
+  self::{
+    freezable_rune_updater::FreezableRuneUpdater, inscription_updater::InscriptionUpdater,
+    rune_updater::RuneUpdater,
+  },
   super::{fetcher::Fetcher, *},
   futures::future::try_join_all,
   tokio::sync::{
@@ -8,6 +11,7 @@ use {
   },
 };
 
+mod freezable_rune_updater;
 mod inscription_updater;
 mod rune_updater;
 
@@ -350,7 +354,11 @@ impl Updater<'_> {
     }
 
     if self.index.index_runes && self.height >= self.index.settings.first_rune_height() {
+      let mut rune_to_freezable_rune_id = wtx.open_multimap_table(RUNE_TO_FREEZABLE_RUNE_ID)?;
+      let mut outpoint_id_to_outpoint = wtx.open_table(OUTPOINT_ID_TO_OUTPOINT)?;
+      let mut outpoint_to_outpoint_id = wtx.open_table(OUTPOINT_TO_OUTPOINT_ID)?;
       let mut outpoint_to_rune_balances = wtx.open_table(OUTPOINT_TO_RUNE_BALANCES)?;
+      let mut outpoint_to_frozen_rune_id = wtx.open_multimap_table(OUTPOINT_TO_FROZEN_RUNE_ID)?;
       let mut rune_id_to_rune_entry = wtx.open_table(RUNE_ID_TO_RUNE_ENTRY)?;
       let mut rune_to_rune_id = wtx.open_table(RUNE_TO_RUNE_ID)?;
       let mut sequence_number_to_rune_id = wtx.open_table(SEQUENCE_NUMBER_TO_RUNE_ID)?;
@@ -360,6 +368,13 @@ impl Updater<'_> {
         .get(&Statistic::Runes.into())?
         .map(|x| x.value())
         .unwrap_or(0);
+
+      let freezable_rune_updater = FreezableRuneUpdater {
+        lost: HashMap::new(),
+        event_sender: self.index.event_sender.as_ref(),
+        height: self.height,
+        outpoint_to_frozen_rune_id: &mut outpoint_to_frozen_rune_id,
+      };
 
       let mut rune_updater = RuneUpdater {
         event_sender: self.index.event_sender.as_ref(),
@@ -373,12 +388,17 @@ impl Updater<'_> {
           self.index.settings.chain().network(),
           Height(self.height),
         ),
+        rune_to_freezable_rune_id: &mut rune_to_freezable_rune_id,
+        outpoint_id_to_outpoint: &mut outpoint_id_to_outpoint,
+        outpoint_to_outpoint_id: &mut outpoint_to_outpoint_id,
         outpoint_to_balances: &mut outpoint_to_rune_balances,
         rune_to_id: &mut rune_to_rune_id,
         runes,
         sequence_number_to_rune_id: &mut sequence_number_to_rune_id,
         statistic_to_count: &mut statistic_to_count,
         transaction_id_to_rune: &mut transaction_id_to_rune,
+        freezable_rune_updater,
+        index_freezable_runes: true,
       };
 
       for (i, (tx, txid)) in block.txdata.iter().enumerate() {

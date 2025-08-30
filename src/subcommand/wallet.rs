@@ -12,6 +12,7 @@ pub mod burn;
 pub mod cardinals;
 pub mod create;
 pub mod dump;
+pub mod freeze;
 pub mod inscribe;
 pub mod inscriptions;
 mod label;
@@ -29,6 +30,7 @@ mod shared_args;
 pub mod sign;
 pub mod split;
 pub mod transactions;
+pub mod unfreeze;
 
 #[derive(Debug, Parser)]
 pub(crate) struct WalletCommand {
@@ -62,6 +64,8 @@ pub(crate) enum Subcommand {
   Create(create::Create),
   #[command(about = "Dump wallet descriptors")]
   Dump,
+  #[command(about = "Freeze runes")]
+  Freeze(freeze::Freeze),
   #[command(about = "Create inscription")]
   Inscribe(inscribe::Inscribe),
   #[command(about = "List wallet inscriptions")]
@@ -94,6 +98,8 @@ pub(crate) enum Subcommand {
   Split(split::Split),
   #[command(about = "See wallet transactions")]
   Transactions(transactions::Transactions),
+  #[command(about = "Unfreeze runes")]
+  Unfreeze(unfreeze::Unfreeze),
 }
 
 impl WalletCommand {
@@ -126,6 +132,7 @@ impl WalletCommand {
       Subcommand::Cardinals => cardinals::run(wallet),
       Subcommand::Create(_) | Subcommand::Restore(_) => unreachable!(),
       Subcommand::Dump => dump::run(wallet),
+      Subcommand::Freeze(freeze) => freeze.run(wallet),
       Subcommand::Inscribe(inscribe) => inscribe.run(wallet),
       Subcommand::Inscriptions => inscriptions::run(wallet),
       Subcommand::Label => label::run(wallet),
@@ -141,6 +148,7 @@ impl WalletCommand {
       Subcommand::Sign(sign) => sign.run(wallet),
       Subcommand::Split(split) => split.run(wallet),
       Subcommand::Transactions(transactions) => transactions.run(wallet),
+      Subcommand::Unfreeze(unfreeze) => unfreeze.run(wallet),
     }
   }
 

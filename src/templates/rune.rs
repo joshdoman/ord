@@ -47,6 +47,7 @@ mod tests {
         entry: RuneEntry {
           block: 1,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           divisibility: 9,
           etching: Txid::all_zeros(),
           mints: 100,
@@ -65,6 +66,7 @@ mod tests {
           symbol: Some('@'),
           timestamp: 0,
           turbo: true,
+          freezer: None,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: true,
@@ -115,12 +117,16 @@ mod tests {
   <dd>0.12%</dd>
   <dt>burned</dt>
   <dd>123456789.123456789\u{A0}@</dd>
+  <dt>lost</dt>
+  <dd>987654321.987654321\u{A0}@</dd>
   <dt>divisibility</dt>
   <dd>9</dd>
   <dt>symbol</dt>
   <dd>@</dd>
   <dt>turbo</dt>
   <dd>true</dd>
+  <dt>freezer</dt>
+  <dd>none</dd>
   <dt>etching</dt>
   <dd><a class=collapse href=/tx/0{64}>0{64}</a></dd>
   <dt>parent</dt>
@@ -137,6 +143,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: None,
           divisibility: 9,
           etching: Txid::all_zeros(),
@@ -150,6 +157,7 @@ mod tests {
           symbol: Some('%'),
           timestamp: 0,
           turbo: false,
+          freezer: None,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -171,6 +179,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: None,
           divisibility: 9,
           etching: Txid::all_zeros(),
@@ -184,6 +193,7 @@ mod tests {
           symbol: Some('%'),
           timestamp: 0,
           turbo: false,
+          freezer: None,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -205,6 +215,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 123456789123456789,
+          lost: 987654321987654321,
           terms: Some(Terms {
             cap: None,
             offset: (None, None),
@@ -223,6 +234,7 @@ mod tests {
           symbol: Some('%'),
           timestamp: 0,
           turbo: false,
+          freezer: None,
         },
         id: RuneId { block: 10, tx: 9 },
         mintable: false,
@@ -261,6 +273,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 0,
+          lost: 0,
           divisibility: 0,
           etching: Txid::all_zeros(),
           mints: 5555,
@@ -279,6 +292,7 @@ mod tests {
           symbol: None,
           timestamp: 0,
           turbo: false,
+          freezer: None,
         },
         id: RuneId { block: 0, tx: 0 },
         mintable: false,
@@ -298,6 +312,7 @@ mod tests {
         entry: RuneEntry {
           block: 0,
           burned: 0,
+          lost: 0,
           divisibility: 0,
           etching: Txid::all_zeros(),
           mints: 5555,
@@ -316,6 +331,7 @@ mod tests {
           symbol: None,
           timestamp: 0,
           turbo: false,
+          freezer: None,
         },
         id: RuneId { block: 0, tx: 0 },
         mintable: true,

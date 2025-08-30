@@ -649,12 +649,14 @@ impl Server {
            inscriptions,
            sat_balance,
            runes_balances,
+           frozen_runes_balances,
          }| AddressHtml {
           address: satscard.address.clone(),
           header: false,
           inscriptions,
           outputs,
           runes_balances,
+          frozen_runes_balances,
           sat_balance,
         },
       );
@@ -772,6 +774,7 @@ impl Server {
           outpoint,
           output: txout,
           runes: output_info.runes,
+          frozen_runes: output_info.frozen_runes,
           sat_ranges: output_info.sat_ranges,
           spent: output_info.spent,
         }
@@ -884,6 +887,7 @@ impl Server {
               .is_empty()
               && index
                 .get_rune_balances_for_output(output)?
+                .0
                 .unwrap_or_default()
                 .is_empty()
           }
@@ -893,6 +897,7 @@ impl Server {
             .is_empty(),
           OutputType::Runic => !index
             .get_rune_balances_for_output(output)?
+            .0
             .unwrap_or_default()
             .is_empty(),
         };
@@ -1096,6 +1101,7 @@ impl Server {
           outputs,
           inscriptions,
           runes_balances,
+          frozen_runes_balances,
         } = info;
 
         AddressHtml {
@@ -1104,6 +1110,7 @@ impl Server {
           inscriptions,
           outputs,
           runes_balances,
+          frozen_runes_balances,
           sat_balance,
         }
         .page(server_config)
@@ -1125,13 +1132,15 @@ impl Server {
 
     let inscriptions = index.get_inscriptions_for_outputs(&outputs)?;
 
-    let runes_balances = index.get_aggregated_rune_balances_for_outputs(&outputs)?;
+    let (runes_balances, frozen_runes_balances) =
+      index.get_aggregated_rune_balances_for_outputs(&outputs)?;
 
     Ok(Some(api::AddressInfo {
       sat_balance,
       outputs,
       inscriptions,
       runes_balances,
+      frozen_runes_balances,
     }))
   }
 
@@ -3454,6 +3463,7 @@ mod tests {
           .into_iter()
           .collect()
         ),
+        frozen_runes: Some(BTreeMap::new()),
         spent: false,
       }
     );
@@ -7697,6 +7707,7 @@ next
               inscriptions: Some(Vec::new()),
               outputs: Vec::new(),
               runes_balances: None,
+              frozen_runes_balances: None,
               sat_balance: 0,
             }),
           )),

@@ -282,8 +282,11 @@ impl Wallet {
       let Some(runes) = &info.runes else {
         return Ok(None);
       };
+      let Some(frozen_runes) = &info.frozen_runes else {
+        return Ok(None);
+      };
 
-      if !runes.is_empty() {
+      if !runes.is_empty() || !frozen_runes.is_empty() {
         runic_outputs.insert(*output);
       }
     }
@@ -301,6 +304,20 @@ impl Wallet {
         .get(output)
         .ok_or(anyhow!("output not found in wallet"))?
         .runes
+        .clone(),
+    )
+  }
+
+  pub(crate) fn get_frozen_runes_balances_in_output(
+    &self,
+    output: &OutPoint,
+  ) -> Result<Option<BTreeMap<SpacedRune, Pile>>> {
+    Ok(
+      self
+        .output_info
+        .get(output)
+        .ok_or(anyhow!("output not found in wallet"))?
+        .frozen_runes
         .clone(),
     )
   }
@@ -1122,6 +1139,165 @@ impl Wallet {
         Some(Artifact::Runestone(runestone)),
       );
     }
+
+    Ok(unsigned_transaction)
+  }
+
+  pub fn create_unsigned_freeze_or_unfreeze_runes_transaction(
+    &self,
+    freeze: bool,
+    fee_rate: FeeRate,
+    rune: SpacedRune,
+    outpoints: Vec<OutPoint>,
+    postage: Option<Amount>,
+  ) -> Result<Transaction> {
+    ensure!(
+      self.has_rune_index(),
+      format!(
+        "`ord wallet {}` requires index created with `--index-runes` flag",
+        if freeze { "freeze" } else { "unfreeze" },
+      ),
+    );
+
+    let rune = rune.rune;
+
+    let Some((id, rune_entry, _)) = self.get_rune(rune)? else {
+      bail!("rune {rune} has not been etched");
+    };
+
+    let Some(freezer) = rune_entry.freezer else {
+      bail!("rune {rune} not freezable");
+    };
+
+    let Some((_, freezer_entry, _)) = self.get_rune(freezer)? else {
+      bail!("freezer rune {freezer} has not been etched");
+    };
+
+    let balances = self
+      .get_runic_outputs()?
+      .unwrap_or_default()
+      .into_iter()
+      .map(|output| {
+        self.get_runes_balances_in_output(&output).map(|balance| {
+          (
+            output,
+            balance
+              .unwrap_or_default()
+              .into_iter()
+              .map(|(spaced_rune, pile)| (spaced_rune.rune, pile.amount))
+              .collect(),
+          )
+        })
+      })
+      .collect::<Result<BTreeMap<OutPoint, BTreeMap<Rune, u128>>>>()?;
+
+    let mut input = None;
+    for (output, runes) in balances {
+      if let Some(balance) = runes.get(&freezer) {
+        if *balance > 0 {
+          input = Some(output);
+          break;
+        }
+      }
+    }
+
+    let Some(input) = input else {
+      bail!(
+        "insufficient `{}` balance, 0 in wallet",
+        freezer_entry.spaced_rune
+      );
+    };
+
+    let postage = postage.unwrap_or(TARGET_POSTAGE);
+
+    let destination = self.get_change_address()?;
+
+    ensure!(
+      destination.script_pubkey().minimal_non_dust() <= postage,
+      "postage below dust limit of {}sat",
+      destination.script_pubkey().minimal_non_dust().to_sat()
+    );
+
+    let mut outpoint_ids = Vec::new();
+    for outpoint in outpoints {
+      let tx_info = self
+        .bitcoin_client
+        .get_transaction(&outpoint.txid, None)?
+        .info;
+      let Some(blockheight) = tx_info.blockheight else {
+        bail!("outpoint `{}` not found", outpoint);
+      };
+      let Some(blockindex) = tx_info.blockindex else {
+        bail!("outpoint `{}` not found", outpoint);
+      };
+      outpoint_ids.push(
+        OutPointId::new(
+          blockheight.into(),
+          blockindex.try_into().unwrap(),
+          outpoint.vout,
+        )
+        .unwrap(),
+      );
+    }
+
+    let edict = FreezeEdict {
+      rune_id: Some(id),
+      outpoints: outpoint_ids,
+    };
+
+    let runestone = if freeze {
+      Runestone {
+        freeze: Some(edict),
+        ..default()
+      }
+    } else {
+      Runestone {
+        unfreeze: Some(edict),
+        ..default()
+      }
+    };
+
+    let script_pubkey = runestone.encipher();
+
+    ensure!(
+      script_pubkey.len() <= MAX_STANDARD_OP_RETURN_SIZE,
+      "runestone greater than maximum OP_RETURN size: {} > {}",
+      script_pubkey.len(),
+      MAX_STANDARD_OP_RETURN_SIZE,
+    );
+
+    let unfunded_transaction = Transaction {
+      version: Version(2),
+      lock_time: LockTime::ZERO,
+      input: vec![TxIn {
+        previous_output: input,
+        script_sig: ScriptBuf::new(),
+        sequence: Sequence::MAX,
+        witness: Witness::new(),
+      }],
+      output: vec![
+        TxOut {
+          script_pubkey,
+          value: Amount::from_sat(0),
+        },
+        TxOut {
+          script_pubkey: destination.script_pubkey(),
+          value: postage,
+        },
+      ],
+    };
+
+    self.lock_non_cardinal_outputs()?;
+
+    let unsigned_transaction =
+      fund_raw_transaction(self.bitcoin_client(), fee_rate, &unfunded_transaction)?;
+
+    let unsigned_transaction = consensus::encode::deserialize(&unsigned_transaction)?;
+
+    assert_eq!(
+      Runestone::decipher(&unsigned_transaction),
+      Some(Artifact::Runestone(runestone)),
+    );
 
     Ok(unsigned_transaction)
   }

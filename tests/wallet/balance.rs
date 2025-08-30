@@ -29,6 +29,7 @@ fn wallet_balance() {
       ordinal: 0,
       runic: None,
       runes: None,
+      frozen_runes: None,
       total: 50 * COIN_VALUE,
     }
   );
@@ -52,6 +53,7 @@ fn inscribed_utxos_are_deducted_from_cardinal() {
       ordinal: 0,
       runic: None,
       runes: None,
+      frozen_runes: None,
       total: 0,
     }
   );
@@ -68,6 +70,7 @@ fn inscribed_utxos_are_deducted_from_cardinal() {
       ordinal: 10_000,
       runic: None,
       runes: None,
+      frozen_runes: None,
       total: 100 * COIN_VALUE,
     }
   );
@@ -91,6 +94,7 @@ fn runic_utxos_are_deducted_from_cardinal() {
       ordinal: 0,
       runic: Some(0),
       runes: Some(BTreeMap::new()),
+      frozen_runes: Some(BTreeMap::new()),
       total: 0,
     }
   );
@@ -109,6 +113,7 @@ fn runic_utxos_are_deducted_from_cardinal() {
         symbol: '¢',
         terms: None,
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -138,6 +143,7 @@ fn runic_utxos_are_deducted_from_cardinal() {
         .into_iter()
         .collect()
       ),
+      frozen_runes: Some(BTreeMap::new()),
       total: 50 * COIN_VALUE * 7,
     }
   );
@@ -162,6 +168,7 @@ fn unsynced_wallet_fails_with_unindexed_output() {
       ordinal: 0,
       runic: None,
       runes: None,
+      frozen_runes: None,
       total: 50 * COIN_VALUE,
     }
   );
@@ -203,6 +210,7 @@ fn runic_utxos_are_displayed_with_decimal_amount() {
       ordinal: 0,
       runic: Some(0),
       runes: Some(BTreeMap::new()),
+      frozen_runes: Some(BTreeMap::new()),
       total: 0,
     }
   );
@@ -225,6 +233,7 @@ fn runic_utxos_are_displayed_with_decimal_amount() {
           ..default()
         }),
         turbo: false,
+        freezer: None,
       }),
       inscriptions: vec![batch::Entry {
         file: Some("inscription.jpeg".into()),
@@ -254,6 +263,7 @@ fn runic_utxos_are_displayed_with_decimal_amount() {
         .into_iter()
         .collect()
       ),
+      frozen_runes: Some(BTreeMap::new()),
       total: 50 * COIN_VALUE * 7,
     }
   );
