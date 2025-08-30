@@ -832,6 +832,7 @@ mod tests {
           output: 0,
         }],
         etching: Some(Etching {
+          inscription: Some(u64::MAX),
           premine: Some(u128::MAX),
           rune: Some(Rune(RUNE)),
           terms: Some(Terms {
