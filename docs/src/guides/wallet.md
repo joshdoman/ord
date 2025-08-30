@@ -446,3 +446,109 @@ Once the send transaction confirms, you can confirm receipt by running:
 ```
 ord wallet inscriptions
 ```
+
+Creating an Inscription or Runes Buy Offer
+---------------------------------------
+
+Bid `AMOUNT` on the inscription `INSCRIPTION_ID` using:
+
+```
+ord wallet buy-offer create --fee-rate <FEE_RATE> --outgoing <INSCRIPTION_ID> --amount <AMOUNT>
+```
+
+Bid `AMOUNT` on the rune balance `<DECIMAL:RUNE>` at `UTXO` using:
+
+```
+ord wallet buy-offer create --fee-rate <FEE_RATE> --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --utxo <UTXO>
+```
+
+See the pending transaction with:
+
+```
+ord wallet transactions
+```
+
+Once the accept transaction confirms, you can view your updated balance with:
+
+```
+ord wallet balance
+```
+
+Accepting an Inscription or Runes Buy Offer
+----------------------------------------
+
+Accept the offer to buy the inscription `INSCRIPTION_ID` for `AMOUNT` via `PSBT` using:
+
+```
+ord wallet buy-offer accept --outgoing <INSCRIPTION_ID> --amount <AMOUNT> --psbt <PSBT>
+```
+
+Accept the offer to buy the rune balance `<DECIMAL:RUNE>` sold in `PSBT` using:
+
+```
+ord wallet buy-offer accept --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --psbt <PSBT>
+```
+
+Creating a Runes Sell Offer
+---------------------------
+
+Offer to sell the rune balance `<DECIMAL:RUNE>` for `AMOUNT` using:
+
+```
+ord wallet sell-offer create --outgoing <DECIMAL:RUNE> --amount <AMOUNT>
+```
+
+This will generate a partially signed bitcoin transaction (PSBT), which you can broadcast for anyone to fund and sign.
+
+By default, you may only offer to sell an amount of runes `<DECIMAL:RUNE>` that equals the exact rune balance in a UTXO in your wallet.
+
+To create an offer for a non-exact balance, you must first send that balance to yourself and wait for the transaction to be confirmed.
+
+Creating a Multi-UTXO Runes Sell Offer
+--------------------------------------
+
+To create multiple sub-offers that sum to `<DECIMAL:RUNE>` in a single PSBT, use the flag `--allow-multiple-utxos`:
+
+```
+ord wallet sell-offer create --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --allow-multiple-utxos
+```
+
+Sub-offers are created at a price per rune equivalent to `AMOUNT` / `DECIMAL`, rounding up to the nearest sat.
+
+Creating a Partial Runes Sell Offer
+-----------------------------------
+
+If an exact offer for `<DECIMAL:RUNE>` is not possible, add the flag `--allow-partial` to offer the largest exact balance below `<DECIMAL:RUNE>`:
+
+```
+ord wallet sell-offer create --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --allow-partial
+```
+
+The flag `--allow-multiple-utxos` may be combined with `--allow-partial` to create the largest possible set of sub-offers that sum to a balance below `<DECIMAL:RUNE>`:
+
+```
+ord wallet sell-offer create --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --allow-multiple-utxos --allow-partial
+```
+
+Partial offers are created at a price per rune equivalent to `AMOUNT` / `DECIMAL`, rounding up to the nearest sat.
+
+Accepting a Runes Sell Offer
+----------------------------
+
+Accept the offer in `PSBT` to sell at least `<DECIMAL:RUNE>` for `AMOUNT` using:
+
+```
+ord wallet sell-offer accept --outgoing <DECIMAL:RUNE> --amount <AMOUNT> --fee-rate <FEE_RATE>
+```
+
+See the pending transaction with:
+
+```
+ord wallet transactions
+```
+
+Once the accept transaction confirms, you can view your updated balance with:
+
+```
+ord wallet balance
+```
